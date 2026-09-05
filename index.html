@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#0a0c10" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="X Gallery" />
+  <meta name="description" content="Lưu và xem ảnh/video từ X (Twitter)" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <title>X Gallery</title>
+  <style>
+    :root {
+      --bg: #0a0c10; --surface: #12161e; --surface2: #1a2030; --border: #2a3344;
+      --text: #f0f2f5; --muted: #8b93a3; --accent: #7b91ff;
+      --accent-dim: rgba(123,145,255,.18); --danger: #ff6b7a;
+      --radius: 12px; --gap: 6px; --cols: 3;
+      --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+    .top {
+      flex-shrink: 0; background: rgba(18,22,30,.94); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border); padding: 10px 12px 8px; padding-top: calc(var(--safe-t) + 10px);
+    }
+    .top-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; flex: 1; min-width: 0; }
+    .logo-badge {
+      width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg,#7b91ff,#5b6fd8);
+      display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-size: 15px;
+      display: grid; place-items: center; cursor: pointer; flex-shrink: 0;
+    }
+    .icon-btn:active { transform: scale(.95); background: var(--accent-dim); }
+    .icon-btn.active { border-color: var(--accent); background: var(--accent-dim); }
+    .add-row { display: flex; gap: 8px; }
+    .add-row input {
+      flex: 1; height: 42px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); padding: 0 12px; font-size: 14px; outline: none;
+    }
+    .add-row input::placeholder { color: var(--muted); }
+    .add-row input:focus { border-color: var(--accent); }
+    .btn {
+      height: 42px; padding: 0 16px; border-radius: 12px; border: none;
+      font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #0c0e12; }
+    .btn-primary:active { opacity: .88; }
+    .album-tabs { display: flex; gap: 6px; margin-top: 10px; }
+    .album-tab {
+      flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .album-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .filters { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .filter-btn {
+      height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .meta-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-top: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap;
+    }
+    .meta-row select, .meta-row .chip-select {
+      appearance: none; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 4px 22px 4px 8px; font-size: 12px; font-weight: 600;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%238b93a3'%3E%3Cpath d='M2 3l3 3 3-3'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 6px center; max-width: 140px;
+    }
+    .progress-panel {
+      display: none; margin-top: 10px; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface2);
+    }
+    .progress-panel.show { display: block; }
+    .progress-panel .p-label {
+      font-size: 12px; color: var(--muted); margin-bottom: 8px;
+      display: flex; justify-content: space-between; gap: 8px;
+    }
+    .progress-panel .p-label strong { color: var(--text); }
+    .progress-track {
+      height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; width: 0%; border-radius: 999px;
+      background: linear-gradient(90deg, #5b6fd8, #7b91ff);
+      transition: width .25s ease;
+    }
+    .progress-panel .p-actions { margin-top: 8px; display: flex; gap: 8px; }
+    .progress-panel .p-actions button {
+      flex: 1; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .progress-panel .p-actions button.stop {
+      border-color: rgba(255,80,90,.35); background: rgba(255,80,90,.15); color: var(--danger);
+    }
+    .main {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 10px; padding-bottom: calc(16px + var(--safe-b));
+    }
+    .gallery { column-count: var(--cols); column-gap: var(--gap); }
+    .g-item {
+      break-inside: avoid; margin-bottom: var(--gap); border-radius: var(--radius);
+      overflow: hidden; background: var(--surface2); position: relative; cursor: pointer;
+    }
+    .g-item img { width: 100%; height: auto; display: block; }
+    .g-item .play-badge {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.25); pointer-events: none;
+    }
+    .g-item .play-badge span {
+      width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,.55);
+      color: #fff; display: grid; place-items: center; font-size: 16px;
+    }
+    .g-item .tag {
+      position: absolute; left: 6px; bottom: 6px; background: rgba(0,0,0,.55);
+      color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 6px; pointer-events: none;
+    }
+    .empty { text-align: center; padding: 64px 20px; color: var(--muted); }
+    .empty h3 { color: var(--text); margin-bottom: 8px; font-size: 16px; }
+    .empty p { font-size: 13px; line-height: 1.5; }
+
+    .viewer {
+      position: fixed; inset: 0; z-index: 100; background: #000;
+      display: none; flex-direction: column;
+    }
+    .viewer.open { display: flex; }
+    .viewer-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      padding: 10px 12px; padding-top: calc(var(--safe-t) + 10px);
+      background: rgba(0,0,0,.55); z-index: 5;
+    }
+    .viewer-body {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden; touch-action: none;
+    }
+    .viewer-body .media-wrap {
+      max-width: 100%; max-height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      transform-origin: center center;
+    }
+    .viewer-body img, .viewer-body video {
+      max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+    }
+    .viewer-body video { width: 100%; max-height: 100%; background: #000; }
+    .tf-layer {
+      max-width: 100%; max-height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      transform-origin: center center;
+    }
+    .tf-layer img, .tf-layer video {
+      max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+    }
+    .tf-layer video { width: 100%; max-height: calc(100dvh - 200px); background: #000; }
+    .vid-bar {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      display: flex; flex-direction: column; gap: 6px;
+      padding: 10px 12px 12px;
+      background: linear-gradient(transparent, rgba(0,0,0,.85));
+      z-index: 6; touch-action: none;
+    }
+    .vid-bar-row { display: flex; align-items: center; gap: 8px; }
+    .vid-bar button {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: rgba(255,255,255,.15); color: #fff; font-size: 14px;
+      cursor: pointer; flex-shrink: 0;
+      display: grid; place-items: center; -webkit-user-select: none; user-select: none;
+    }
+    .vid-bar button:active { background: rgba(255,255,255,.28); }
+    .vid-bar button.wide {
+      width: auto; min-width: 40px; padding: 0 10px; border-radius: 18px; font-size: 12px; font-weight: 600;
+    }
+    .vid-bar input[type=range] {
+      flex: 1; accent-color: var(--accent); height: 28px; margin: 0;
+      -webkit-appearance: none; appearance: none; background: transparent;
+    }
+    .vid-bar input[type=range]::-webkit-slider-runnable-track {
+      height: 4px; border-radius: 2px; background: rgba(255,255,255,.25);
+    }
+    .vid-bar input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); margin-top: -6px; box-shadow: 0 0 0 3px rgba(123,145,255,.25);
+    }
+    .vid-bar .t {
+      color: #ddd; font-size: 11px; min-width: 78px; text-align: right;
+      font-variant-numeric: tabular-nums; flex-shrink: 0;
+    }
+    .vid-bar .progress-wrap { flex: 1; display: flex; align-items: center; gap: 8px; }
+    .nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 42px; height: 42px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,.4); color: #fff; font-size: 22px;
+      display: grid; place-items: center; cursor: pointer; z-index: 4;
+    }
+    .nav.prev { left: 10px; }
+    .nav.next { right: 10px; }
+    .viewer-bottom {
+      display: flex; gap: 8px; align-items: center; padding: 12px;
+      padding-bottom: calc(12px + var(--safe-b));
+      background: rgba(0,0,0,.55); z-index: 5;
+    }
+    .viewer-bottom .btn-main {
+      flex: 1; height: 44px; border-radius: 12px; border: none;
+      background: var(--accent); color: #0c0e12; font-weight: 600; font-size: 14px; cursor: pointer;
+    }
+    .viewer-bottom .btn-mid {
+      flex: 0 0 auto; min-width: 110px; height: 44px; padding: 0 14px;
+      border-radius: 12px; border: 1px solid rgba(255,255,255,.18);
+      background: #1c2230; color: #fff; font-weight: 600; font-size: 12px; cursor: pointer;
+    }
+    .viewer-bottom .btn-del {
+      flex: 0 0 auto; height: 44px; padding: 0 16px; border-radius: 12px;
+      border: 1px solid rgba(255,80,90,.35); background: rgba(255,80,90,.2);
+      color: var(--danger); font-weight: 600; font-size: 14px; cursor: pointer;
+    }
+    .sheet-mask {
+      position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.45);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .sheet-mask.open { display: flex; }
+    .sheet {
+      width: 100%; max-width: 480px; background: #151922; border-radius: 18px 18px 0 0;
+      border: 1px solid var(--border); padding: 14px 16px;
+      padding-bottom: calc(16px + var(--safe-b));
+    }
+    .sheet h3 { font-size: 15px; margin-bottom: 6px; }
+    .sheet .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .sheet-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .sheet-actions button {
+      flex: 1; min-width: 40%; height: 44px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .sheet-actions .primary {
+      background: var(--accent); color: #0c0e12; border: none; width: 100%; margin-top: 4px;
+    }
+    .sheet-actions .full { width: 100%; min-width: 100%; }
+    .loading {
+      position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
+      display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    }
+    .loading.show { display: flex; }
+    .spinner {
+      width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.2);
+      border-top-color: var(--accent); border-radius: 50%; animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--surface2); color: #fff; padding: 11px 18px; border-radius: 24px;
+      font-size: 13px; z-index: 200; transition: transform .28s ease;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none; max-width: 86vw; text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="top-row">
+        <div class="logo"><div class="logo-badge">X</div><span>X Gallery</span></div>
+        <button class="icon-btn" id="btnRefresh" title="Refresh user đã lưu">🔄</button>
+        <button class="icon-btn" id="btnAccounts" title="User đã lưu">👤</button>
+        <button class="icon-btn" id="btnClear" title="Xóa tất cả">🗑️</button>
+      </div>
+      <div class="add-row">
+        <input type="text" id="linkInput" placeholder="Link bài / @user / profile X..." autocomplete="off" />
+        <button class="btn btn-primary" id="btnAdd">Thêm</button>
+      </div>
+      <div class="progress-panel" id="progressPanel">
+        <div class="p-label">
+          <span id="progressText">Đang tải...</span>
+          <strong id="progressCount">0</strong>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="p-actions">
+          <button type="button" class="stop" id="btnStopProgress">Dừng</button>
+        </div>
+      </div>
+      <div class="album-tabs">
+        <button class="album-tab active" data-album="all">Tất cả</button>
+        <button class="album-tab" data-album="link">📎 Link/Share</button>
+        <button class="album-tab" data-album="user">👤 Từ user</button>
+      </div>
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">Media</button>
+        <button class="filter-btn" data-filter="photo">Ảnh</button>
+        <button class="filter-btn" data-filter="video">Video</button>
+      </div>
+      <div class="meta-row">
+        <span id="countLabel">0 mục</span>
+        <label>User
+          <select id="userFilter">
+            <option value="">Tất cả user</option>
+          </select>
+        </label>
+        <label>Sort
+          <select id="sortSelect">
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+          </select>
+        </label>
+        <label>Cột
+          <select id="colsSelect">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="main">
+      <div class="gallery" id="gallery"></div>
+      <div class="empty" id="empty">
+        <h3>Chưa có nội dung</h3>
+        <p>Dán link bài viết X, hoặc @user / profile<br>để lấy media bài đăng / repost</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="viewer" id="viewer">
+    <div class="viewer-top">
+      <button class="icon-btn" id="btnClose">✕</button>
+      <span id="viewerCounter">1 / 1</span>
+      <button class="icon-btn" id="btnSettings">⚙️</button>
+    </div>
+    <div class="viewer-body" id="viewerBody">
+      <button class="nav prev" id="btnPrev">‹</button>
+      <div class="media-wrap" id="mediaWrap"></div>
+      <button class="nav next" id="btnNext">›</button>
+    </div>
+    <div class="viewer-bottom">
+      <button class="btn-main" id="btnOpen">Mở bài viết gốc</button>
+      <button class="btn-mid" id="btnMode">—</button>
+      <button class="btn-del" id="btnDel">Xóa</button>
+    </div>
+  </div>
+
+  <div class="sheet-mask" id="settingsSheet">
+    <div class="sheet">
+      <h3>⚙️ Cài đặt media này</h3>
+      <p class="hint">Chỉ áp dụng & lưu cho media đang xem</p>
+      <div class="sheet-actions">
+        <button id="btnRotate">🔄 Xoay 90°</button>
+        <button id="btnFlipH">⇆ Lật ngang</button>
+        <button id="btnFlipV">⇅ Lật dọc</button>
+        <button id="btnResetTF">↩️ Reset</button>
+      </div>
+      <div class="sheet-actions">
+        <button class="primary" id="btnCloseSheet">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-mask" id="userModeSheet">
+    <div class="sheet">
+      <h3 id="userModeTitle">Lấy media từ user</h3>
+      <p class="hint" id="userModeHint">Chọn nguồn media</p>
+      <div class="sheet-actions">
+        <button class="full" id="btnModePosts">📝 Bài đăng của user</button>
+        <button class="full" id="btnModeReposts">🔁 Repost</button>
+        <button class="full" id="btnModeAll">📦 Tất cả (bài + repost)</button>
+      </div>
+      <div class="sheet-actions">
+        <button class="primary" id="btnCloseUserMode">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-mask" id="accountsSheet">
+    <div class="sheet">
+      <h3>👤 User đã lưu</h3>
+      <p class="hint">Refresh sẽ lấy media mới từ các user này</p>
+      <div id="accountsList" style="max-height:40vh;overflow:auto;font-size:13px"></div>
+      <div class="sheet-actions">
+        <button class="primary" id="btnCloseAccounts">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div style="color:#fff;font-size:13px">Đang lấy media...</div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+const PROXY_URL = "https://xgallery.dar48305.workers.dev";
+const MIN_POSTS = 100;
+const MAX_PAGES = 30;
+
+let items = [];
+let accounts = [];
+let filtered = [];
+let currentFilter = "all";
+let currentAlbum = "all";
+let currentUserFilter = "";
+let sortOrder = "newest";
+let currentIndex = 0;
+let cols = 3;
+let scale = 1, posX = 0, posY = 0, lastTap = 0;
+let swipeMode = localStorage.getItem("xgal_swipe") || "horizontal";
+let pendingUsername = null;
+let job = null;
+
+const DB_NAME = "x-gallery-db";
+const STORE = "images";
+const STORE_ACC = "accounts";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 4);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(STORE_ACC)) db.createObjectStore(STORE_ACC, { keyPath: "username" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function loadItems() {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+async function saveItem(item) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(item);
+    tx.oncomplete = () => resolve();
+  });
+}
+async function deleteItem(id) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+  });
+}
+async function clearAll() {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+  });
+}
+async function loadAccounts() {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_ACC, "readonly");
+    const req = tx.objectStore(STORE_ACC).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+  });
+}
+async function saveAccount(acc) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_ACC, "readwrite");
+    tx.objectStore(STORE_ACC).put(acc);
+    tx.oncomplete = () => resolve();
+  });
+}
+async function deleteAccount(username) {
+  const db = await openDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction(STORE_ACC, "readwrite");
+    tx.objectStore(STORE_ACC).delete(username);
+    tx.oncomplete = () => resolve();
+  });
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2400);
+}
+function setLoading(on) {
+  document.getElementById("loading").classList.toggle("show", on);
+}
+function showProgress(on) {
+  document.getElementById("progressPanel").classList.toggle("show", !!on);
+}
+function setProgress(text, current, target) {
+  document.getElementById("progressText").textContent = text;
+  const t = Math.max(target || 100, 1);
+  const c = current || 0;
+  document.getElementById("progressFill").style.width = Math.min(100, Math.round((c / t) * 100)) + "%";
+  document.getElementById("progressCount").textContent = target ? (c + "/" + target) : String(c);
+}
+
+function ensureView(item) {
+  if (!item.view) item.view = { rotation: 0, flipH: false, flipV: false, autoNext: false };
+  return item.view;
+}
+
+function applyFilter() {
+  let list = items.slice();
+  if (currentAlbum === "link") list = list.filter((i) => (i.source || "link") === "link");
+  else if (currentAlbum === "user") list = list.filter((i) => i.source === "user-posts" || i.source === "user-reposts" || i.source === "repost");
+
+  if (currentFilter === "photo") list = list.filter((i) => i.type === "photo");
+  else if (currentFilter === "video") list = list.filter((i) => i.type === "video" || i.type === "gif");
+
+  if (currentUserFilter) {
+    const u = currentUserFilter.toLowerCase();
+    list = list.filter((i) => (i.fromUser || "").toLowerCase() === u);
+  }
+
+  list.sort((a, b) => {
+    const da = a.addedAt || 0, db = b.addedAt || 0;
+    return sortOrder === "oldest" ? da - db : db - da;
+  });
+  filtered = list;
+}
+
+function updateUserFilterOptions() {
+  const sel = document.getElementById("userFilter");
+  const cur = sel.value;
+  const users = {};
+  items.forEach((i) => {
+    if (i.fromUser) users[i.fromUser] = true;
+  });
+  accounts.forEach((a) => { users[a.username] = true; });
+  const names = Object.keys(users).sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">Tất cả user</option>' +
+    names.map((n) => '<option value="' + n + '">@' + n + "</option>").join("");
+  if (cur && users[cur]) sel.value = cur;
+  else sel.value = "";
+  currentUserFilter = sel.value;
+}
+
+function updateCount() {
+  const total = items.length, shown = filtered.length;
+  let label = shown + " mục";
+  if (shown !== total) label += " / " + total;
+  document.getElementById("countLabel").textContent = label;
+  document.getElementById("empty").style.display = shown ? "none" : "block";
+}
+
+function render() {
+  applyFilter();
+  const gallery = document.getElementById("gallery");
+  gallery.style.setProperty("--cols", cols);
+  gallery.innerHTML = "";
+  filtered.forEach((item, idx) => {
+    const div = document.createElement("div");
+    div.className = "g-item";
+    if (item.type === "photo") {
+      div.innerHTML = '<img src="' + item.url + '" loading="lazy" referrerpolicy="no-referrer" alt="" /><div class="tag">' + (idx + 1) + "</div>";
+    } else {
+      const thumb = item.thumb || item.url;
+      div.innerHTML = '<img src="' + thumb + '" loading="lazy" referrerpolicy="no-referrer" alt="" /><div class="play-badge"><span>▶</span></div><div class="tag">' + (item.type === "gif" ? "GIF" : "Video") + "</div>";
+    }
+    div.onclick = () => openViewer(idx);
+    gallery.appendChild(div);
+  });
+  updateCount();
+  updateUserFilterOptions();
+}
+
+function resetZoom() { scale = 1; posX = 0; posY = 0; }
+
+function applyMediaTransform() {
+  const layer = document.getElementById("tfLayer");
+  if (!layer || !filtered[currentIndex]) return;
+  const v = ensureView(filtered[currentIndex]);
+  const sx = (v.flipH ? -1 : 1) * scale;
+  const sy = (v.flipV ? -1 : 1) * scale;
+  layer.style.transform =
+    "translate(" + posX + "px," + posY + "px) rotate(" + (v.rotation || 0) + "deg) scale(" + sx + "," + sy + ")";
+}
+
+async function persistCurrentView() {
+  const item = filtered[currentIndex];
+  if (!item) return;
+  const src = items.find((i) => i.id === item.id);
+  if (src) src.view = item.view;
+  await saveItem(item);
+}
+
+function openViewer(idx) {
+  currentIndex = idx;
+  resetZoom();
+  document.getElementById("viewer").classList.add("open");
+  updateViewer();
+}
+function closeViewer() {
+  const v = document.querySelector("#mediaWrap video");
+  if (v) v.pause();
+  const bar = document.querySelector(".vid-bar");
+  if (bar) bar.remove();
+  document.getElementById("viewer").classList.remove("open");
+}
+
+function updateModeButton() {
+  const item = filtered[currentIndex];
+  const btn = document.getElementById("btnMode");
+  if (!item) return;
+  if (item.type === "photo") {
+    btn.textContent = swipeMode === "vertical" ? "Vuốt: Dọc" : "Vuốt: Ngang";
+  } else {
+    const v = ensureView(item);
+    btn.textContent = v.autoNext ? "Tự chuyển" : "Lặp video";
+  }
+}
+
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ":" + (sec < 10 ? "0" : "") + sec;
+}
+
+function bindVideoBar(vid) {
+  const playBtn = document.getElementById("vidPlay");
+  const seek = document.getElementById("vidSeek");
+  const timeEl = document.getElementById("vidTime");
+  const muteBtn = document.getElementById("vidMute");
+  const speedBtn = document.getElementById("vidSpeed");
+  const skipBack = document.getElementById("vidSkipBack");
+  const skipFwd = document.getElementById("vidSkipFwd");
+  const fsBtn = document.getElementById("vidFs");
+  if (!playBtn || !seek || !vid) return;
+
+  const rates = [1, 1.25, 1.5, 2, 0.5, 0.75];
+  let rateIdx = rates.indexOf(vid.playbackRate);
+  if (rateIdx < 0) rateIdx = 0;
+
+  function updateTime() {
+    if (!seek.dragging) {
+      seek.value = vid.duration && isFinite(vid.duration)
+        ? (vid.currentTime / vid.duration) * 100 : 0;
+    }
+    if (timeEl) timeEl.textContent = fmtTime(vid.currentTime) + " / " + fmtTime(vid.duration);
+  }
+  function syncMuteUI() {
+    if (muteBtn) muteBtn.textContent = vid.muted || vid.volume === 0 ? "🔇" : "🔊";
+  }
+  function syncSpeedUI() {
+    if (speedBtn) speedBtn.textContent = vid.playbackRate === 1 ? "1x" : vid.playbackRate + "x";
+  }
+
+  playBtn.onclick = function (e) {
+    e.stopPropagation(); e.preventDefault();
+    if (vid.paused) vid.play().catch(function () {}); else vid.pause();
+  };
+  vid.onclick = function (e) {
+    e.stopPropagation();
+    if (vid.paused) vid.play().catch(function () {}); else vid.pause();
+  };
+  vid.ontimeupdate = updateTime;
+  vid.onloadedmetadata = updateTime;
+  vid.ondurationchange = updateTime;
+  vid.onplay = function () { playBtn.textContent = "⏸"; };
+  vid.onpause = function () { playBtn.textContent = "▶"; };
+  seek.oninput = function () {
+    seek.dragging = true;
+    if (vid.duration && isFinite(vid.duration)) vid.currentTime = (seek.value / 100) * vid.duration;
+    if (timeEl) timeEl.textContent = fmtTime(vid.currentTime) + " / " + fmtTime(vid.duration);
+  };
+  seek.onchange = function () { seek.dragging = false; };
+  seek.ontouchstart = function (e) { e.stopPropagation(); };
+  if (muteBtn) muteBtn.onclick = function (e) { e.stopPropagation(); vid.muted = !vid.muted; syncMuteUI(); };
+  if (speedBtn) {
+    speedBtn.onclick = function (e) {
+      e.stopPropagation();
+      rateIdx = (rateIdx + 1) % rates.length;
+      vid.playbackRate = rates[rateIdx];
+      syncSpeedUI();
+      toast("Tốc độ " + vid.playbackRate + "x");
+    };
+  }
+  if (skipBack) skipBack.onclick = function (e) { e.stopPropagation(); vid.currentTime = Math.max(0, vid.currentTime - 10); updateTime(); };
+  if (skipFwd) skipFwd.onclick = function (e) {
+    e.stopPropagation();
+    const d = vid.duration && isFinite(vid.duration) ? vid.duration : vid.currentTime + 10;
+    vid.currentTime = Math.min(d, vid.currentTime + 10); updateTime();
+  };
+  if (fsBtn) {
+    fsBtn.onclick = function (e) {
+      e.stopPropagation();
+      const body = document.getElementById("viewerBody");
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        const el = body || vid;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitEnterFullscreen;
+        if (req) req.call(el).catch(function () { if (vid.webkitEnterFullscreen) vid.webkitEnterFullscreen(); });
+        else if (vid.webkitEnterFullscreen) vid.webkitEnterFullscreen();
+      } else {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) exit.call(document);
+      }
+    };
+  }
+  const bar = document.querySelector(".vid-bar");
+  if (bar) {
+    bar.addEventListener("touchstart", function (e) { e.stopPropagation(); }, { passive: true });
+    bar.addEventListener("touchmove", function (e) { e.stopPropagation(); }, { passive: false });
+  }
+  syncMuteUI(); syncSpeedUI(); updateTime();
+  if (!vid.paused) playBtn.textContent = "⏸";
+}
+
+function updateViewer() {
+  if (!filtered.length) return;
+  const item = filtered[currentIndex];
+  ensureView(item);
+  const wrap = document.getElementById("mediaWrap");
+  resetZoom();
+  const oldBar = document.querySelector(".vid-bar");
+  if (oldBar) oldBar.remove();
+
+  if (item.type === "photo") {
+    wrap.innerHTML = '<div class="tf-layer" id="tfLayer"><img src="' + item.url + '" referrerpolicy="no-referrer" alt="" /></div>';
+  } else {
+    const v = ensureView(item);
+    const loopAttr = v.autoNext ? "" : " loop";
+    wrap.innerHTML =
+      '<div class="tf-layer" id="tfLayer">' +
+        '<video id="viewerVideo" src="' + item.url + '" playsinline webkit-playsinline preload="auto" referrerpolicy="no-referrer" autoplay' + loopAttr +
+        (item.thumb ? ' poster="' + item.thumb + '"' : "") + "></video>" +
+      "</div>";
+    const bar = document.createElement("div");
+    bar.className = "vid-bar";
+    bar.innerHTML =
+      '<div class="vid-bar-row">' +
+        '<button type="button" id="vidPlay">▶</button>' +
+        '<div class="progress-wrap">' +
+          '<input type="range" id="vidSeek" min="0" max="100" value="0" step="0.1" />' +
+          '<span class="t" id="vidTime">0:00 / 0:00</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="vid-bar-row">' +
+        '<button type="button" id="vidMute">🔊</button>' +
+        '<button type="button" id="vidSkipBack" class="wide">−10s</button>' +
+        '<button type="button" id="vidSkipFwd" class="wide">+10s</button>' +
+        '<button type="button" id="vidSpeed" class="wide">1x</button>' +
+        '<button type="button" id="vidFs">⛶</button>' +
+      '</div>';
+    document.getElementById("viewerBody").appendChild(bar);
+    const vid = document.getElementById("viewerVideo");
+    if (vid) {
+      vid.onerror = function () { toast("Không phát được video"); };
+      vid.play().catch(function () { vid.muted = true; vid.play().catch(function () {}); });
+      bindVideoBar(vid);
+      if (v.autoNext) {
+        vid.onended = function () {
+          currentIndex = (currentIndex + 1) % filtered.length;
+          updateViewer();
+        };
+      }
+    }
+  }
+  applyMediaTransform();
+  updateModeButton();
+  document.getElementById("viewerCounter").textContent = (currentIndex + 1) + " / " + filtered.length;
+}
+
+document.getElementById("btnClose").onclick = closeViewer;
+document.getElementById("btnPrev").onclick = () => {
+  currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+  updateViewer();
+};
+document.getElementById("btnNext").onclick = () => {
+  currentIndex = (currentIndex + 1) % filtered.length;
+  updateViewer();
+};
+document.getElementById("btnOpen").onclick = () => {
+  const item = filtered[currentIndex];
+  if (!item || !item.postUrl) return;
+  window.open(item.postUrl, "_blank");
+};
+document.getElementById("btnDel").onclick = async () => {
+  const item = filtered[currentIndex];
+  if (!item) return;
+  await deleteItem(item.id);
+  items = items.filter((i) => i.id !== item.id);
+  applyFilter();
+  if (!filtered.length) closeViewer();
+  else {
+    currentIndex = Math.min(currentIndex, filtered.length - 1);
+    updateViewer();
+  }
+  render();
+  toast("Đã xóa");
+};
+document.getElementById("btnMode").onclick = async () => {
+  const item = filtered[currentIndex];
+  if (!item) return;
+  if (item.type === "photo") {
+    swipeMode = swipeMode === "horizontal" ? "vertical" : "horizontal";
+    localStorage.setItem("xgal_swipe", swipeMode);
+    updateModeButton();
+    toast(swipeMode === "vertical" ? "Vuốt lên/xuống để chuyển" : "Vuốt trái/phải để chuyển");
+  } else {
+    const v = ensureView(item);
+    v.autoNext = !v.autoNext;
+    await persistCurrentView();
+    updateViewer();
+    toast(v.autoNext ? "Tự chuyển video" : "Lặp video");
+  }
+};
+
+document.getElementById("btnSettings").onclick = () => document.getElementById("settingsSheet").classList.add("open");
+document.getElementById("btnCloseSheet").onclick = () => document.getElementById("settingsSheet").classList.remove("open");
+document.getElementById("settingsSheet").addEventListener("click", (e) => {
+  if (e.target.id === "settingsSheet") e.target.classList.remove("open");
+});
+document.getElementById("btnRotate").onclick = async () => {
+  const item = filtered[currentIndex]; if (!item) return;
+  ensureView(item).rotation = ((ensureView(item).rotation || 0) + 90) % 360;
+  applyMediaTransform(); await persistCurrentView();
+};
+document.getElementById("btnFlipH").onclick = async () => {
+  const item = filtered[currentIndex]; if (!item) return;
+  ensureView(item).flipH = !ensureView(item).flipH;
+  applyMediaTransform(); await persistCurrentView();
+};
+document.getElementById("btnFlipV").onclick = async () => {
+  const item = filtered[currentIndex]; if (!item) return;
+  ensureView(item).flipV = !ensureView(item).flipV;
+  applyMediaTransform(); await persistCurrentView();
+};
+document.getElementById("btnResetTF").onclick = async () => {
+  const item = filtered[currentIndex]; if (!item) return;
+  item.view = { rotation: 0, flipH: false, flipV: false, autoNext: (item.view && item.view.autoNext) || false };
+  resetZoom(); applyMediaTransform(); await persistCurrentView(); toast("Đã reset");
+};
+
+(function setupGestures() {
+  const body = document.getElementById("viewerBody");
+  let startDist = 0, startScale = 1, startX = 0, startY = 0;
+  let isPinching = false, isPanning = false;
+  let swipeStartX = 0, swipeStartY = 0, swiping = false;
+  function getDist(t) {
+    const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  body.addEventListener("touchstart", (e) => {
+    const item = filtered[currentIndex]; if (!item) return;
+    if (item.type === "photo" && e.touches.length === 2) {
+      isPinching = true; isPanning = false; swiping = false;
+      startDist = getDist(e.touches); startScale = scale; return;
+    }
+    if (e.touches.length === 1) {
+      const now = Date.now();
+      if (item.type === "photo" && now - lastTap < 280) {
+        if (scale > 1.1) { scale = 1; posX = 0; posY = 0; }
+        else {
+          scale = 2.5;
+          const rect = body.getBoundingClientRect();
+          const cx = e.touches[0].clientX - rect.left - rect.width / 2;
+          const cy = e.touches[0].clientY - rect.top - rect.height / 2;
+          posX = -cx * (scale - 1); posY = -cy * (scale - 1);
+        }
+        applyMediaTransform(); lastTap = 0; return;
+      }
+      lastTap = now;
+      if (item.type === "photo" && scale > 1.05) {
+        isPanning = true;
+        startX = e.touches[0].clientX - posX;
+        startY = e.touches[0].clientY - posY;
+      } else {
+        swiping = true;
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+      }
+    }
+  }, { passive: true });
+  body.addEventListener("touchmove", (e) => {
+    const item = filtered[currentIndex]; if (!item) return;
+    if (isPinching && e.touches.length === 2 && item.type === "photo") {
+      e.preventDefault();
+      scale = Math.min(4, Math.max(1, startScale * (getDist(e.touches) / startDist)));
+      applyMediaTransform(); return;
+    }
+    if (isPanning && e.touches.length === 1 && scale > 1.05 && item.type === "photo") {
+      e.preventDefault();
+      posX = e.touches[0].clientX - startX;
+      posY = e.touches[0].clientY - startY;
+      applyMediaTransform();
+    }
+  }, { passive: false });
+  body.addEventListener("touchend", (e) => {
+    if (swiping && e.changedTouches.length === 1) {
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      const dy = e.changedTouches[0].clientY - swipeStartY;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      if (swipeMode === "horizontal" && absX > 50 && absX > absY) {
+        if (dx < 0) currentIndex = (currentIndex + 1) % filtered.length;
+        else currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+        updateViewer();
+      } else if (swipeMode === "vertical" && absY > 50 && absY > absX) {
+        if (dy < 0) currentIndex = (currentIndex + 1) % filtered.length;
+        else currentIndex = (currentIndex - 1 + filtered.length) % filtered.length;
+        updateViewer();
+      }
+    }
+    isPinching = false; isPanning = false; swiping = false;
+    if (scale < 1.05) { scale = 1; posX = 0; posY = 0; applyMediaTransform(); }
+  });
+})();
+
+function extractTweetId(url) {
+  const m = (url || "").match(/(?:twitter\.com|x\.com)\/[^\/\s]+\/status\/(\d+)/i) ||
+    (url || "").match(/\/status\/(\d+)/i);
+  return m ? m[1] : null;
+}
+function extractUsername(input) {
+  let s = (input || "").trim().split("#")[0];
+  if (extractTweetId(s)) return null;
+  let m = s.match(/(?:twitter\.com|x\.com)\/@?([A-Za-z0-9_]{1,15})(?:\/|\?|$)/i);
+  if (m) {
+    const u = m[1];
+    if (!/^(status|i|search|home|explore|settings|compose|intent|share|hashtag|messages)$/i.test(u)) return u;
+  }
+  m = s.match(/^@?([A-Za-z0-9_]{1,15})$/);
+  return m ? m[1] : null;
+}
+
+async function proxyFetch(url) {
+  let res;
+  try { res = await fetch(url); }
+  catch (e) { throw new Error("Không kết nối được proxy. Kiểm tra Worker đã deploy chưa."); }
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); }
+  catch (e) {
+    if (/hello world/i.test(text)) throw new Error("Worker đang Hello World — deploy lại worker.js");
+    throw new Error("Proxy không trả JSON (HTTP " + res.status + ")");
+  }
+  if (!res.ok) throw new Error((data && data.error) || ("Lỗi proxy HTTP " + res.status));
+  return data;
+}
+
+async function addMediaList(list, meta) {
+  let added = 0;
+  for (let i = 0; i < list.length; i++) {
+    const m = list[i];
+    if (!m || !m.url) continue;
+    if (items.some((it) => it.url === m.url)) continue;
+    const item = {
+      id: crypto.randomUUID(),
+      type: m.type || "photo",
+      url: m.url,
+      thumb: m.thumb || null,
+      postUrl: m.postUrl || meta.postUrl || null,
+      source: meta.source || "link",
+      fromUser: meta.fromUser || null,
+      mode: meta.mode || null,
+      addedAt: Date.now(),
+      view: { rotation: 0, flipH: false, flipV: false, autoNext: false }
+    };
+    await saveItem(item);
+    items.unshift(item);
+    added++;
+  }
+  if (added) render();
+  return added;
+}
+
+async function upsertAccount(username, modes) {
+  const uname = username.toLowerCase() === username ? username : username;
+  let acc = accounts.find((a) => a.username.toLowerCase() === uname.toLowerCase());
+  if (!acc) {
+    acc = { username: uname, modes: [], lastFetchAt: 0, addedAt: Date.now() };
+    accounts.push(acc);
+  }
+  (modes || []).forEach((m) => {
+    if (acc.modes.indexOf(m) < 0) acc.modes.push(m);
+  });
+  acc.lastFetchAt = Date.now();
+  await saveAccount(acc);
+}
+
+async function loadUserProgressive(username, mode) {
+  if (job && job.running) { toast("Đang chạy — bấm Dừng để hủy"); return; }
+  const modes = mode === "all" ? ["posts", "reposts"] : [mode];
+  job = { running: true, stop: false };
+  showProgress(true);
+  let totalAdded = 0;
+  let postsScanned = 0;
+
+  try {
+    for (let mi = 0; mi < modes.length && !job.stop; mi++) {
+      const m = modes[mi];
+      const onlyRt = m === "reposts";
+      const source = m === "reposts" ? "user-reposts" : "user-posts";
+      const allIds = [];
+      const seen = {};
+      let cursor = "";
+      let page = 0;
+
+      setProgress("@" + username + " · " + m + " — thu thập post...", 0, MIN_POSTS);
+
+      while (job.running && !job.stop && page < MAX_PAGES) {
+        page++;
+        const q = PROXY_URL + "?user=" + encodeURIComponent(username) +
+          "&mode=" + encodeURIComponent(m) + "&action=list&pageSize=25" +
+          (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+        setProgress("@" + username + " · " + m + " · trang " + page + " (" + allIds.length + " post)", allIds.length, MIN_POSTS);
+        const data = await proxyFetch(q);
+        const ids = data.ids || [];
+        for (let i = 0; i < ids.length; i++) {
+          if (seen[ids[i]]) continue;
+          seen[ids[i]] = true;
+          allIds.push(ids[i]);
+        }
+        cursor = data.nextCursor || "";
+        if (!data.hasMore || !cursor || !ids.length) break;
+        if (allIds.length >= MIN_POSTS * 2) break;
+      }
+
+      if (!allIds.length) {
+        toast("Không có " + m + " cho @" + username);
+        continue;
+      }
+
+      setProgress("Tải media " + m + " 0/" + allIds.length, 0, allIds.length);
+      const batch = 4;
+      for (let i = 0; i < allIds.length && !job.stop; i += batch) {
+        const slice = allIds.slice(i, i + batch);
+        const results = await Promise.all(slice.map(async (sid) => {
+          try { return await proxyFetch(PROXY_URL + "?id=" + sid); }
+          catch (e) { return null; }
+        }));
+        for (let r = 0; r < results.length; r++) {
+          postsScanned++;
+          const data = results[r];
+          if (!data || !data.media || !data.media.length) continue;
+          const list = data.media.map((x) => Object.assign({}, x, { postUrl: x.postUrl || data.postUrl }));
+          totalAdded += await addMediaList(list, {
+            source: source,
+            fromUser: username,
+            mode: m,
+            postUrl: data.postUrl
+          });
+        }
+        setProgress(
+          "@" + username + " · " + m + " · " + postsScanned + " post · +" + totalAdded,
+          postsScanned,
+          allIds.length
+        );
+      }
+    }
+    await upsertAccount(username, modes);
+    toast(totalAdded ? ("Xong: +" + totalAdded + " media") : "Không thêm media mới");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Lỗi tải user");
+  } finally {
+    job.running = false;
+    showProgress(false);
+    document.getElementById("linkInput").value = "";
+  }
+}
+
+async function addFromPostLink(url) {
+  setLoading(true);
+  try {
+    const id = extractTweetId(url);
+    if (!id) throw new Error("Không tìm thấy ID bài viết");
+    const data = await proxyFetch(PROXY_URL + "?id=" + id);
+    const list = data.media || [];
+    if (!list.length) { toast("Bài viết không có ảnh/video"); return; }
+    const author = data.author || null;
+    const added = await addMediaList(list.map((m) => Object.assign({}, m, { postUrl: m.postUrl || data.postUrl })), {
+      source: "link",
+      fromUser: author,
+      postUrl: data.postUrl || url
+    });
+    toast(added ? ("Đã thêm " + added + " mục") : "Đã có sẵn");
+    document.getElementById("linkInput").value = "";
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Lỗi");
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openUserModeSheet(username) {
+  pendingUsername = username;
+  document.getElementById("userModeTitle").textContent = "Lấy media @" + username;
+  document.getElementById("userModeHint").textContent = "Chọn nguồn · tối thiểu ~" + MIN_POSTS + " post / nguồn";
+  document.getElementById("userModeSheet").classList.add("open");
+}
+function closeUserModeSheet() {
+  document.getElementById("userModeSheet").classList.remove("open");
+  pendingUsername = null;
+}
+
+async function handleInput(raw) {
+  const text = (raw || "").trim();
+  if (!text) return;
+  const tweetId = extractTweetId(text);
+  if (tweetId) {
+    await addFromPostLink(text);
+    return;
+  }
+  const username = extractUsername(text);
+  if (username) {
+    openUserModeSheet(username);
+    return;
+  }
+  toast("Dán link bài viết, @user hoặc link profile X");
+}
+
+document.getElementById("btnAdd").onclick = () => handleInput(document.getElementById("linkInput").value);
+document.getElementById("linkInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleInput(e.target.value);
+});
+document.getElementById("btnModePosts").onclick = () => {
+  const u = pendingUsername; closeUserModeSheet();
+  if (u) loadUserProgressive(u, "posts");
+};
+document.getElementById("btnModeReposts").onclick = () => {
+  const u = pendingUsername; closeUserModeSheet();
+  if (u) loadUserProgressive(u, "reposts");
+};
+document.getElementById("btnModeAll").onclick = () => {
+  const u = pendingUsername; closeUserModeSheet();
+  if (u) loadUserProgressive(u, "all");
+};
+document.getElementById("btnCloseUserMode").onclick = closeUserModeSheet;
+document.getElementById("userModeSheet").addEventListener("click", (e) => {
+  if (e.target.id === "userModeSheet") closeUserModeSheet();
+});
+document.getElementById("btnStopProgress").onclick = () => {
+  if (job) job.stop = true;
+  toast("Đang dừng...");
+};
+
+document.querySelectorAll(".album-tab").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".album-tab").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentAlbum = btn.dataset.album;
+    render();
+  };
+});
+document.querySelectorAll(".filter-btn").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter = btn.dataset.filter;
+    render();
+  };
+});
+document.getElementById("userFilter").onchange = (e) => {
+  currentUserFilter = e.target.value;
+  render();
+};
+document.getElementById("sortSelect").onchange = (e) => {
+  sortOrder = e.target.value;
+  render();
+};
+document.getElementById("colsSelect").onchange = (e) => {
+  cols = Number(e.target.value);
+  render();
+};
+
+document.getElementById("btnClear").onclick = async () => {
+  if (!confirm("Xóa toàn bộ media trong gallery?")) return;
+  await clearAll();
+  items = [];
+  render();
+  toast("Đã xóa tất cả media");
+};
+
+function renderAccountsList() {
+  const el = document.getElementById("accountsList");
+  if (!accounts.length) {
+    el.innerHTML = '<p style="color:var(--muted);padding:8px 0">Chưa lưu user nào</p>';
+    return;
+  }
+  el.innerHTML = accounts
+    .slice()
+    .sort((a, b) => (b.lastFetchAt || 0) - (a.lastFetchAt || 0))
+    .map((a) => {
+      const when = a.lastFetchAt ? new Date(a.lastFetchAt).toLocaleString() : "—";
+      return (
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+          "<div><strong>@" + a.username + "</strong><br><span style=\"color:var(--muted);font-size:11px\">" +
+          (a.modes || []).join(", ") + " · " + when + "</span></div>" +
+          '<button type="button" data-del="' + a.username + '" style="height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--danger);font-size:12px;font-weight:600">Xóa</button>' +
+        "</div>"
+      );
+    })
+    .join("");
+  el.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.onclick = async () => {
+      const u = btn.getAttribute("data-del");
+      await deleteAccount(u);
+      accounts = accounts.filter((a) => a.username !== u);
+      renderAccountsList();
+      updateUserFilterOptions();
+      toast("Đã xóa @" + u + " khỏi danh sách");
+    };
+  });
+}
+
+document.getElementById("btnAccounts").onclick = () => {
+  renderAccountsList();
+  document.getElementById("accountsSheet").classList.add("open");
+};
+document.getElementById("btnCloseAccounts").onclick = () => document.getElementById("accountsSheet").classList.remove("open");
+document.getElementById("accountsSheet").addEventListener("click", (e) => {
+  if (e.target.id === "accountsSheet") e.target.classList.remove("open");
+});
+
+document.getElementById("btnRefresh").onclick = async () => {
+  if (!accounts.length) { toast("Chưa có user đã lưu"); return; }
+  if (job && job.running) { toast("Đang chạy job khác"); return; }
+  if (!confirm("Refresh " + accounts.length + " user đã lưu? (lấy media mới)")) return;
+  for (let i = 0; i < accounts.length; i++) {
+    const a = accounts[i];
+    const modes = (a.modes && a.modes.length) ? a.modes : ["reposts"];
+    for (let j = 0; j < modes.length; j++) {
+      if (job && job.stop) break;
+      await loadUserProgressive(a.username, modes[j]);
+    }
+  }
+};
+
+function extractXUrl(text) {
+  if (!text || typeof text !== "string") return null;
+  const t = text.trim();
+  let m = t.match(/https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[^\s]+\/status\/\d+[^\s]*/i);
+  if (m) return m[0].replace(/[),.;]+$/, "");
+  m = t.match(/https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/@?[A-Za-z0-9_]{1,15}\/?/i);
+  if (m) return m[0].replace(/[),.;]+$/, "");
+  m = t.match(/https?:\/\/(?:www\.)?(?:x\.com|twitter\.com)\/[^\s]+/i);
+  if (m) return m[0].replace(/[),.;]+$/, "");
+  if (/^@?[A-Za-z0-9_]{1,15}$/.test(t)) return t;
+  return null;
+}
+function tryHandleShared() {
+  const params = new URLSearchParams(location.search);
+  const candidates = [params.get("url"), params.get("text"), params.get("shared"), params.get("title")];
+  for (let i = 0; i < candidates.length; i++) {
+    const found = extractXUrl(candidates[i]);
+    if (found) {
+      handleInput(found);
+      history.replaceState({}, "", location.pathname + location.hash);
+      return;
+    }
+  }
+  if (window.sharedText && typeof window.sharedText === "string") {
+    handleInput(extractXUrl(window.sharedText) || window.sharedText);
+    window.sharedText = null;
+  }
+}
+window.addEventListener("sharedtext", (e) => {
+  if (e.detail) handleInput(extractXUrl(e.detail) || e.detail);
+});
+document.addEventListener("paste", (e) => {
+  const active = document.activeElement;
+  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) return;
+  const text = (e.clipboardData || window.clipboardData).getData("text");
+  const found = extractXUrl(text);
+  if (found) {
+    e.preventDefault();
+    document.getElementById("linkInput").value = found;
+    handleInput(found);
+  }
+});
+
+function registerSW() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" }).then(function (reg) {
+      reg.update().catch(function () {});
+    }).catch(function () {});
+  });
+}
+
+(async function init() {
+  items = await loadItems();
+  accounts = await loadAccounts();
+  items.forEach((it) => {
+    if (!it.type) it.type = "photo";
+    if (!it.source) it.source = "link";
+    if (it.source === "repost") it.source = "user-reposts";
+    if (!it.view) it.view = { rotation: 0, flipH: false, flipV: false, autoNext: false };
+  });
+  items.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+  render();
+  tryHandleShared();
+  registerSW();
+})();
+</script>
+</body>
+</html>
