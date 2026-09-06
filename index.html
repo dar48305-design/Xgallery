@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="theme-color" content="#0a0c10" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>X Gallery</title>
+  <style>
+    :root {
+      --bg: #0a0c10; --surface: #12161e; --surface2: #1a2030; --border: #2a3344;
+      --text: #f0f2f5; --muted: #8b93a3; --accent: #7b91ff; --accent-dim: rgba(123,145,255,.18);
+      --danger: #ff6b7a; --radius: 12px; --gap: 6px; --cols: 3;
+      --safe-t: env(safe-area-inset-top,0px); --safe-b: env(safe-area-inset-bottom,0px);
+      --nav-h: 58px;
+      --chat-bg: #0d0f14; --chat-mine: #5b6fd8; --chat-theirs: #1c2230; --chat-text: #f0f2f5;
+      --chat-text-mine: #f0f2f5; --chat-text-theirs: #f0f2f5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui,-apple-system,sans-serif; overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+    .screen { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .screen.active { display: flex; }
+    .top {
+      flex-shrink: 0; background: rgba(18,22,30,.94); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 10px 12px; padding-top: calc(var(--safe-t) + 10px);
+    }
+    .top-row { display: flex; align-items: center; gap: 8px; }
+    .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; flex: 1; }
+    .logo-badge { width: 28px; height: 28px; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid var(--border); }
+    .logo-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 11px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-size: 15px;
+      display: grid; place-items: center; cursor: pointer;
+    }
+    .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px; padding-bottom: calc(var(--nav-h) + var(--safe-b) + 12px); }
+    .hl-head { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+    .chip {
+      height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .hl-title { font-size: 13px; color: var(--muted); margin: 4px 0 6px; }
+    .hl-pitch {
+      font-size: 13px; line-height: 1.45; color: var(--text);
+      background: var(--accent-dim); border: 1px solid rgba(123,145,255,.28);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+      display: none;
+    }
+    .hl-pitch.show { display: block; }
+    .hl-pitch .who { font-weight: 700; color: var(--accent); margin-right: 4px; }
+    .hl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .hl-card {
+      position: relative; border-radius: 14px; overflow: hidden; background: var(--surface2);
+      aspect-ratio: 3/4; cursor: pointer;
+    }
+    .hl-card img, .hl-card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hl-card .badge {
+      position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.55); color: #fff;
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    }
+    .hl-empty { text-align: center; color: var(--muted); padding: 40px 16px; font-size: 13px; }
+
+    .add-row { display: flex; gap: 8px; margin-top: 8px; }
+    .add-row input {
+      flex: 1; height: 40px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); padding: 0 12px; font-size: 14px; outline: none;
+    }
+    .btn { height: 40px; padding: 0 14px; border-radius: 12px; border: none; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .btn-primary { background: var(--accent); color: #0c0e12; }
+    .album-tabs, .filters { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .album-tab, .filter-btn {
+      height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .album-tab.active, .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
+    .meta-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; font-size: 12px; color: var(--muted); }
+    .meta-row select {
+      appearance: none; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 4px 22px 4px 8px; font-size: 12px; font-weight: 600;
+    }
+    .gallery.masonry { column-count: var(--cols); column-gap: var(--gap); }
+    .gallery.horizontal {
+      column-count: unset; display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr); gap: var(--gap);
+      align-items: stretch;
+    }
+    .g-item {
+      break-inside: avoid; margin-bottom: var(--gap); border-radius: var(--radius);
+      overflow: hidden; background: var(--surface2); position: relative; cursor: pointer;
+    }
+    /* Ngang: ô đều, crop cover để khít hàng (tránh khoảng trống lớn) */
+    .gallery.horizontal .g-item {
+      margin-bottom: 0;
+      aspect-ratio: 3 / 4;
+    }
+    .gallery.horizontal .g-item img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
+    }
+    .g-item img { width: 100%; height: auto; display: block; }
+    .g-item .play-badge {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.25); pointer-events: none;
+    }
+    .g-item .play-badge span {
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(0,0,0,.55);
+      color: #fff; display: grid; place-items: center; font-size: 14px;
+    }
+    .g-item .tag {
+      position: absolute; left: 6px; bottom: 6px; background: rgba(0,0,0,.55);
+      color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 6px;
+    }
+    .load-more {
+      display: none; width: 100%; margin: 12px 0; height: 42px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+      font-size: 13px; font-weight: 600;
+    }
+    .load-more.show { display: block; }
+    .empty { text-align: center; padding: 48px 16px; color: var(--muted); font-size: 13px; }
+
+    .bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+      display: flex; gap: 4px; padding: 6px 8px calc(6px + var(--safe-b));
+      background: rgba(18,22,30,.96); border-top: 1px solid var(--border); backdrop-filter: blur(12px);
+      height: auto; min-height: var(--nav-h);
+    }
+    .bottom-nav button {
+      flex: 1; border: none; background: transparent; color: var(--muted);
+      font-size: 10px; font-weight: 600; padding: 6px 4px; border-radius: 10px; cursor: pointer;
+    }
+    .bottom-nav button .ic { font-size: 18px; display: block; margin-bottom: 2px; }
+    .bottom-nav button.active { color: var(--text); background: var(--accent-dim); }
+
+    /* Chat */
+    .chat-screen .top { border-bottom: 1px solid var(--border); }
+    .chat-msgs {
+      flex: 1; overflow-y: auto; padding: 12px; padding-bottom: 8px;
+      background: var(--chat-bg);
+    }
+    .bubble {
+      width: fit-content; max-width: min(82%, 420px); margin-bottom: 10px; padding: 10px 12px; border-radius: 16px;
+      font-size: 14px; line-height: 1.4; color: var(--chat-text); word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .bubble.theirs { background: var(--chat-theirs); color: var(--chat-text-theirs, var(--chat-text)); border-bottom-left-radius: 4px; margin-right: auto; }
+    .bubble.mine { background: var(--chat-mine); color: var(--chat-text-mine, var(--chat-text)); border-bottom-right-radius: 4px; margin-left: auto; }
+    .bubble .media-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .bubble .media-row img {
+      width: 120px; height: 120px; object-fit: cover; border-radius: 10px; cursor: pointer;
+    }
+    .chat-input-row {
+      display: flex; gap: 8px; padding: 8px 10px calc(8px + var(--safe-b));
+      background: var(--surface); border-top: 1px solid var(--border);
+      margin-bottom: var(--nav-h);
+    }
+    .chat-input-row input {
+      flex: 1; height: 42px; border-radius: 21px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); padding: 0 14px; outline: none;
+    }
+    .chat-input-row button {
+      width: 42px; height: 42px; border-radius: 50%; border: none;
+      background: var(--accent); color: #0c0e12; font-weight: 700; cursor: pointer;
+    }
+
+    .settings-block {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; margin-bottom: 10px;
+    }
+    .settings-block h4 { font-size: 13px; margin-bottom: 8px; }
+    .settings-block label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 8px 0; color: var(--muted); }
+    .settings-block input[type=number], .settings-block input[type=text], .settings-block select {
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 8px; padding: 6px 8px; font-size: 13px; max-width: 50%;
+    }
+    .settings-block .row-btn {
+      width: 100%; height: 40px; margin-top: 8px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-weight: 600; font-size: 13px; cursor: pointer;
+    }
+    .settings-block .row-btn.primary { background: var(--accent); color: #0c0e12; border: none; }
+
+    .progress-panel {
+      display: none; margin-top: 8px; padding: 10px; border-radius: 12px;
+      border: 1px solid var(--border); background: var(--surface2);
+    }
+    .progress-panel.show { display: block; }
+    .progress-track { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; background: linear-gradient(90deg,#5b6fd8,#7b91ff); }
+
+    .viewer { position: fixed; inset: 0; z-index: 100; background: #000; display: none; flex-direction: column; }
+    .viewer.open { display: flex; }
+    .viewer-top, .viewer-bottom {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      background: rgba(0,0,0,.55); z-index: 5;
+    }
+    .viewer-top { padding-top: calc(var(--safe-t) + 10px); justify-content: space-between; }
+    .viewer-bottom { padding-bottom: calc(12px + var(--safe-b)); }
+    .viewer-body { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; touch-action: none; }
+    .tf-layer { max-width: 100%; max-height: 100%; display: flex; align-items: center; justify-content: center; transform-origin: center center; }
+    .tf-layer img, .tf-layer video { max-width: 100%; max-height: calc(100dvh - 160px); object-fit: contain; }
+    .vid-bar {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+      display: flex; flex-direction: column; gap: 6px; padding: 10px 12px;
+      background: linear-gradient(transparent, rgba(0,0,0,.85)); touch-action: none;
+    }
+    .vid-bar-row { display: flex; align-items: center; gap: 8px; }
+    .vid-bar button {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center;
+    }
+    .vid-bar #vidPlay { background: rgba(123,145,255,.3); }
+    .vid-bar input[type=range] { flex: 1; accent-color: #7b91ff; height: 28px; -webkit-appearance: none; background: transparent; }
+    .vid-bar input[type=range]::-webkit-slider-runnable-track { height: 4px; background: rgba(255,255,255,.25); border-radius: 2px; }
+    .vid-bar input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7b91ff; margin-top: -6px; }
+    .vid-bar .t { color: #ddd; font-size: 11px; min-width: 78px; text-align: right; }
+    .vid-bar button.wide { width: auto; padding: 0 10px; border-radius: 18px; font-size: 12px; font-weight: 600; }
+    .nav {
+      position: absolute; top: 50%; transform: translateY(-50%); width: 42px; height: 42px;
+      border-radius: 50%; border: none; background: rgba(0,0,0,.4); color: #fff; font-size: 22px; z-index: 4;
+    }
+    .nav.prev { left: 10px; } .nav.next { right: 10px; }
+    .viewer-bottom .btn-main { flex: 1; height: 44px; border: none; border-radius: 12px; background: var(--accent); color: #0c0e12; font-weight: 600; }
+    .viewer-bottom .btn-del { height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(255,80,90,.35); background: rgba(255,80,90,.2); color: var(--danger); font-weight: 600; }
+
+    .sheet-mask {
+      position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.45);
+      display: none; align-items: flex-end; justify-content: center;
+    }
+    .sheet-mask.open { display: flex; }
+    .sheet {
+      width: 100%; max-width: 480px; background: #151922; border-radius: 18px 18px 0 0;
+      border: 1px solid var(--border); padding: 14px 16px; padding-bottom: calc(16px + var(--safe-b));
+    }
+    .sheet h3 { font-size: 15px; margin-bottom: 6px; }
+    .sheet .hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+    .sheet-actions { display: flex; flex-direction: column; gap: 8px; }
+    .sheet-actions button {
+      height: 44px; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text); font-weight: 600; font-size: 13px;
+    }
+    .sheet-actions .primary { background: var(--accent); color: #0c0e12; border: none; }
+
+    .loading {
+      position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
+      display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    }
+    .loading.show { display: flex; }
+    .spinner { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.2); border-top-color: var(--accent); border-radius: 50%; animation: spin .75s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast {
+      position: fixed; bottom: calc(70px + var(--safe-b)); left: 50%;
+      transform: translateX(-50%) translateY(24px);
+      background: var(--surface2); color: #fff; padding: 11px 18px; border-radius: 24px;
+      font-size: 13px; z-index: 200; max-width: 86vw; text-align: center;
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transition: opacity .28s ease, transform .28s ease, visibility .28s;
+    }
+    .toast.show {
+      opacity: 1; visibility: visible; pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- HOME / HIGHLIGHTS -->
+    <div class="screen active" id="screenHome">
+      <div class="top">
+        <div class="top-row">
+          <div class="logo"><div class="logo-badge"><img src="./icon-192.png" alt="" /></div><span>X Gallery</span></div>
+          <button class="icon-btn" id="btnShuffleHl" title="Random lại">🎲</button>
+        </div>
+      </div>
+      <div class="scroll" id="homeScroll">
+        <div class="hl-title" id="hlTitle">Highlight hôm nay · random 1–5</div>
+        <div class="hl-pitch" id="hlPitch"></div>
+        <div class="hl-grid" id="hlGrid"></div>
+        <div class="hl-empty" id="hlEmpty">Chưa có media — vào <b>Albums</b> thêm link / user</div>
+      </div>
+    </div>
+
+    <!-- ALBUMS -->
+    <div class="screen" id="screenAlbums">
+      <div class="top">
+        <div class="top-row">
+          <div class="logo"><span>Albums</span></div>
+          <button class="icon-btn" id="btnLayout" title="Đổi kiểu xếp">↔️</button>
+          <button class="icon-btn" id="btnAccounts" title="User">👤</button>
+          <button class="icon-btn" id="btnRefresh" title="Refresh">🔄</button>
+          <button class="icon-btn" id="btnClear" title="Xóa">🗑️</button>
+        </div>
+        <div class="add-row">
+          <input type="text" id="linkInput" placeholder="Link bài / @user / profile..." autocomplete="off" />
+          <button class="btn btn-primary" id="btnAdd">Thêm</button>
+        </div>
+        <div class="progress-panel" id="progressPanel">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between">
+            <span id="progressText">...</span><strong id="progressCount">0</strong>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <button type="button" id="btnStopProgress" class="btn" style="width:100%;margin-top:8px;background:rgba(255,80,90,.15);color:var(--danger);border:1px solid rgba(255,80,90,.35)">Dừng</button>
+        </div>
+        <div class="album-tabs">
+          <button class="album-tab active" data-album="all">Tất cả</button>
+          <button class="album-tab" data-album="new">New items</button>
+          <button class="album-tab" data-album="link">Link/Share</button>
+          <button class="album-tab" data-album="user">Từ user</button>
+        </div>
+        <div class="filters">
+          <button class="filter-btn active" data-filter="all">Media</button>
+          <button class="filter-btn" data-filter="photo">Ảnh</button>
+          <button class="filter-btn" data-filter="video">Video</button>
+        </div>
+        <div class="meta-row">
+          <span id="countLabel">0</span>
+          <select id="userFilter"><option value="">User</option></select>
+          <select id="sortSelect"><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option></select>
+          <select id="colsSelect"><option value="2">2 cột</option><option value="3" selected>3 cột</option><option value="4">4</option></select>
+        </div>
+      </div>
+      <div class="scroll" id="albumScroll">
+        <div class="gallery masonry" id="gallery"></div>
+        <button type="button" class="load-more" id="btnLoadMore">Tải thêm</button>
+        <div class="empty" id="empty">Chưa có nội dung</div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="screen" id="screenChat">
+      <div class="top">
+        <div class="top-row">
+          <div class="logo" id="chatTitle">💋 Chị Tư</div>
+          <button class="icon-btn" id="btnChatTheme">🎨</button>
+          <button class="icon-btn" id="btnChatClear">🗑️</button>
+        </div>
+      </div>
+      <div class="chat-msgs" id="chatMsgs"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Nhắn với chị Tư..." />
+        <button type="button" id="btnChatSend">➤</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS / NOTI -->
+    <div class="screen" id="screenSettings">
+      <div class="top"><div class="top-row"><div class="logo">Cài đặt & Noti</div></div></div>
+      <div class="scroll">
+        <div class="settings-block">
+          <h4>🔔 Nhắc nhở / Notification</h4>
+          <label>Bật nhắc tự động <input type="checkbox" id="notiEnabled" /></label>
+          <label>Mỗi (phút)
+            <select id="notiInterval">
+              <option value="random">Random (30–300)</option>
+              <option value="30">30</option>
+              <option value="60">60</option>
+              <option value="120">120</option>
+              <option value="180" selected>180</option>
+              <option value="360">360</option>
+              <option value="720">720</option>
+              <option value="1440">1440</option>
+            </select>
+          </label>
+          <label>Số media kèm (lưu chat)
+            <select id="notiMediaCount">
+              <option value="random">Random (1–5)</option>
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+          <button type="button" class="row-btn primary" id="btnTestNoti">Test notification ngay</button>
+          <button type="button" class="row-btn" id="btnRequestNoti">Xin quyền thông báo</button>
+        </div>
+        <div class="settings-block">
+          <h4>💬 Theme chat</h4>
+          <label>Biệt danh chị <input type="text" id="chatNick" value="Chị Tư" /></label>
+          <label>Màu tin chị <input type="color" id="chatColorTheirs" value="#1c2230" /></label>
+          <label>Màu tin mình <input type="color" id="chatColorMine" value="#5b6fd8" /></label>
+          <label>Nền chat <input type="color" id="chatColorBg" value="#0d0f14" /></label>
+          <button type="button" class="row-btn primary" id="btnSaveChatTheme">Lưu theme</button>
+        </div>
+        <div class="settings-block">
+          <h4>Layout album</h4>
+          <label>Kiểu xếp
+            <select id="layoutSelect">
+              <option value="masonry">Dọc (masonry)</option>
+              <option value="horizontal">Ngang (grid)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button type="button" class="active" data-screen="home"><span class="ic">✨</span>Home</button>
+      <button type="button" data-screen="albums"><span class="ic">📁</span>Albums</button>
+      <button type="button" data-screen="chat"><span class="ic">💬</span>Chat</button>
+      <button type="button" data-screen="settings"><span class="ic">⚙️</span>Noti</button>
+    </nav>
+  </div>
+
+  <div class="viewer" id="viewer">
+    <div class="viewer-top">
+      <button class="icon-btn" id="btnClose">✕</button>
+      <span id="viewerCounter">1/1</span>
+      <span></span>
+    </div>
+    <div class="viewer-body" id="viewerBody">
+      <button class="nav prev" id="btnPrev">‹</button>
+      <div class="media-wrap" id="mediaWrap"></div>
+      <button class="nav next" id="btnNext">›</button>
+    </div>
+    <div class="viewer-bottom">
+      <button class="btn-main" id="btnOpen">Mở gốc</button>
+      <button class="btn-del" id="btnDel">Xóa</button>
+    </div>
+  </div>
+
+  <div class="sheet-mask" id="userModeSheet">
+    <div class="sheet">
+      <h3 id="userModeTitle">Lấy media user</h3>
+      <p class="hint">Chọn nguồn</p>
+      <div class="sheet-actions">
+        <button id="btnModePosts">📝 Bài đăng</button>
+        <button id="btnModeReposts">🔁 Repost</button>
+        <button id="btnModeAll">📦 Tất cả</button>
+        <button class="primary" id="btnCloseUserMode">Hủy</button>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-mask" id="accountsSheet">
+    <div class="sheet">
+      <h3>User đã lưu</h3>
+      <div id="accountsList" style="max-height:40vh;overflow:auto;font-size:13px"></div>
+      <div class="sheet-actions"><button class="primary" id="btnCloseAccounts">Đóng</button></div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading"><div class="spinner"></div><div style="color:#fff;font-size:13px">Đang lấy media...</div></div>
+  <div class="toast" id="toast"></div>
+
+<script>
+const PROXY_URL = "https://xgallery.dar48305.workers.dev";
+const MIN_POSTS = 100, MAX_PAGES = 30, PAGE_SIZE = 48;
+const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+
+let items = [], accounts = [], filtered = [], chatMessages = [];
+let dialogs = null;
+let currentFilter = "all", currentAlbum = "all", currentUserFilter = "", sortOrder = "newest";
+let currentIndex = 0, cols = 3, layoutMode = localStorage.getItem("xgal_layout") || "masonry";
+let renderPage = 1, renderTimer = null, pendingUsername = null, job = null;
+let hlList = [], hlReshuffle = false;
+let scale = 1, posX = 0, posY = 0, lastTap = 0;
+let notiTimer = null;
+const NEW_ITEMS_MS = 30 * 60 * 1000;
+
+const DB_NAME = "x-gallery-db", STORE = "images", STORE_ACC = "accounts", STORE_CHAT = "chat";
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 5);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(STORE_ACC)) db.createObjectStore(STORE_ACC, { keyPath: "username" });
+      if (!db.objectStoreNames.contains(STORE_CHAT)) db.createObjectStore(STORE_CHAT, { keyPath: "id" });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGetAll(store) {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(store, "readonly");
+    const r = tx.objectStore(store).getAll();
+    r.onsuccess = () => res(r.result || []);
+  });
+}
+async function idbPut(store, obj) {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).put(obj);
+    tx.oncomplete = () => res();
+  });
+}
+async function idbDelete(store, key) {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => res();
+  });
+}
+async function idbClear(store) {
+  const db = await openDB();
+  return new Promise((res) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).clear();
+    tx.oncomplete = () => res();
+  });
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+    toastTimer = null;
+  }, 2400);
+}
+function setLoading(on) { document.getElementById("loading").classList.toggle("show", on); }
+function showProgress(on) { document.getElementById("progressPanel").classList.toggle("show", !!on); }
+function setProgress(text, cur, target) {
+  document.getElementById("progressText").textContent = text;
+  const t = Math.max(target || 100, 1);
+  document.getElementById("progressFill").style.width = Math.min(100, Math.round(((cur || 0) / t) * 100)) + "%";
+  document.getElementById("progressCount").textContent = target ? cur + "/" + target : String(cur || 0);
+}
+
+function switchScreen(name) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+  document.querySelectorAll(".bottom-nav button").forEach((b) => b.classList.toggle("active", b.dataset.screen === name));
+  const map = { home: "screenHome", albums: "screenAlbums", chat: "screenChat", settings: "screenSettings" };
+  document.getElementById(map[name]).classList.add("active");
+  if (name === "home") renderHighlights();
+  if (name === "chat") renderChat();
+}
+
+document.querySelectorAll(".bottom-nav button").forEach((btn) => {
+  btn.onclick = () => switchScreen(btn.dataset.screen);
+});
+
+/* ---------- highlights (chỉ trong ngày, random 1–5) ---------- */
+function seededRandom(seed) {
+  let x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+function daySeed() {
+  const d = new Date();
+  return d.getFullYear() * 1e4 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+function pickHighlights(reshuffle) {
+  if (!items.length) return [];
+  const seed = reshuffle ? Date.now() : daySeed();
+  const scored = items.map((it, i) => ({ it, s: seededRandom(seed + i * 17 + (it.addedAt || 0) % 97) }));
+  scored.sort((a, b) => b.s - a.s);
+  // random 1–5 (ổn định trong ngày nếu không reshuffle)
+  const nSeed = seededRandom(seed + 999);
+  const n = 1 + Math.floor(nSeed * 5);
+  return scored.slice(0, Math.min(n, scored.length)).map((x) => x.it);
+}
+function showHlPitch(force) {
+  const el = document.getElementById("hlPitch");
+  if (!el) return;
+  const lines = (dialogs && dialogs.highlight_pitches) || [
+    "Hàng nóng trong ngày đây — xem là cứng 💋",
+    "Chị chọn mấy món đỉnh cho khách rồi nè",
+    "Vào sảnh xem highlight, không mất phí"
+  ];
+  if (!force && el.dataset.shown === "1" && el.classList.contains("show")) return;
+  const nick = (dialogs && dialogs.persona && dialogs.persona.nickname_default) || "Tú bà Tư";
+  el.innerHTML = '<span class="who">' + nick + ':</span> ' + pick(lines);
+  el.classList.add("show");
+  el.dataset.shown = "1";
+}
+function renderHighlights() {
+  const didShuffle = hlReshuffle;
+  hlList = pickHighlights(hlReshuffle);
+  hlReshuffle = false;
+  const grid = document.getElementById("hlGrid");
+  const empty = document.getElementById("hlEmpty");
+  document.getElementById("hlTitle").textContent =
+    "Highlight hôm nay · " + hlList.length + " media “đỉnh” (random 1–5)";
+  grid.innerHTML = "";
+  if (!hlList.length) {
+    empty.style.display = "block";
+    document.getElementById("hlPitch").classList.remove("show");
+    return;
+  }
+  empty.style.display = "none";
+  showHlPitch(didShuffle);
+  hlList.forEach((item, idx) => {
+    const div = document.createElement("div");
+    div.className = "hl-card";
+    const src = item.type === "photo" ? gridUrl(item.url) : gridUrl(item.thumb || item.url);
+    div.innerHTML = '<img src="' + src + '" loading="lazy" referrerpolicy="no-referrer" alt="" /><div class="badge">#' + (idx + 1) + "</div>";
+    div.onclick = () => {
+      filtered = hlList.slice();
+      openViewer(idx);
+    };
+    grid.appendChild(div);
+  });
+}
+document.getElementById("btnShuffleHl").onclick = () => {
+  hlReshuffle = true;
+  renderHighlights();
+  toast("Đã random highlight mới");
+};
+
+/* ---------- album render ---------- */
+function gridUrl(url) {
+  if (!url) return url;
+  if (url.indexOf("pbs.twimg.com") >= 0) {
+    if (/[?&]name=/.test(url)) return url.replace(/([?&]name=)[^&]+/, "$1small");
+    return url + (url.indexOf("?") >= 0 ? "&" : "?") + "name=small";
+  }
+  return url;
+}
+function scheduleRender(immediate) {
+  if (immediate) { clearTimeout(renderTimer); renderTimer = null; render(); return; }
+  if (renderTimer) return;
+  renderTimer = setTimeout(() => { renderTimer = null; render(); }, 280);
+}
+function applyFilter() {
+  let list = items.slice();
+  const now = Date.now();
+  if (currentAlbum === "new") {
+    list = list.filter((i) => (i.isNew || i.fromShare) && (now - (i.addedAt || 0) < NEW_ITEMS_MS));
+  } else if (currentAlbum === "link") list = list.filter((i) => (i.source || "link") === "link");
+  else if (currentAlbum === "user") list = list.filter((i) => i.source === "user-posts" || i.source === "user-reposts" || i.source === "repost");
+  if (currentFilter === "photo") list = list.filter((i) => i.type === "photo");
+  else if (currentFilter === "video") list = list.filter((i) => i.type === "video" || i.type === "gif");
+  if (currentUserFilter) {
+    const u = currentUserFilter.toLowerCase();
+    list = list.filter((i) => (i.fromUser || "").toLowerCase() === u);
+  }
+  list.sort((a, b) => sortOrder === "oldest" ? (a.addedAt || 0) - (b.addedAt || 0) : (b.addedAt || 0) - (a.addedAt || 0));
+  filtered = list;
+}
+function updateUserFilterOptions() {
+  const sel = document.getElementById("userFilter");
+  const cur = sel.value;
+  const users = {};
+  items.forEach((i) => { if (i.fromUser) users[i.fromUser] = true; });
+  accounts.forEach((a) => { users[a.username] = true; });
+  const names = Object.keys(users).sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">User</option>' + names.map((n) => '<option value="' + n + '">@' + n + "</option>").join("");
+  sel.value = cur && users[cur] ? cur : "";
+  currentUserFilter = sel.value;
+}
+function render() {
+  applyFilter();
+  const gallery = document.getElementById("gallery");
+  gallery.className = "gallery " + (layoutMode === "horizontal" ? "horizontal" : "masonry");
+  gallery.style.setProperty("--cols", cols);
+  const total = filtered.length;
+  const limit = Math.min(total, renderPage * PAGE_SIZE);
+  const slice = filtered.slice(0, limit);
+  gallery.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  slice.forEach((item, idx) => {
+    const div = document.createElement("div");
+    div.className = "g-item";
+    if (item.type === "photo") {
+      div.innerHTML = '<img src="' + gridUrl(item.url) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" /><div class="tag">' + (idx + 1) + "</div>";
+    } else {
+      div.innerHTML = '<img src="' + gridUrl(item.thumb || item.url) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" alt="" /><div class="play-badge"><span>▶</span></div><div class="tag">' + (item.type === "gif" ? "GIF" : "Video") + "</div>";
+    }
+    div.onclick = () => openViewer(idx);
+    frag.appendChild(div);
+  });
+  gallery.appendChild(frag);
+  const more = document.getElementById("btnLoadMore");
+  if (limit < total) { more.classList.add("show"); more.textContent = "Tải thêm (" + limit + "/" + total + ")"; }
+  else more.classList.remove("show");
+  document.getElementById("countLabel").textContent = limit + (limit !== total ? "/" + total : "") + " mục";
+  document.getElementById("empty").style.display = total ? "none" : "block";
+  updateUserFilterOptions();
+}
+function applyLayoutUI() {
+  layoutMode = document.getElementById("layoutSelect").value || layoutMode;
+  localStorage.setItem("xgal_layout", layoutMode);
+  document.getElementById("btnLayout").textContent = layoutMode === "horizontal" ? "↕️" : "↔️";
+  render();
+}
+
+/* ---------- viewer (compact) ---------- */
+function ensureView(item) {
+  if (!item.view) item.view = { rotation: 0, flipH: false, flipV: false, autoNext: false };
+  return item.view;
+}
+function resetZoom() { scale = 1; posX = 0; posY = 0; }
+function applyMediaTransform() {
+  const layer = document.getElementById("tfLayer");
+  if (!layer || !filtered[currentIndex]) return;
+  const v = ensureView(filtered[currentIndex]);
+  const sx = (v.flipH ? -1 : 1) * scale, sy = (v.flipV ? -1 : 1) * scale;
+  layer.style.transform = "translate(" + posX + "px," + posY + "px) rotate(" + (v.rotation || 0) + "deg) scale(" + sx + "," + sy + ")";
+}
+function openViewer(idx) {
+  currentIndex = idx; resetZoom();
+  document.getElementById("viewer").classList.add("open");
+  updateViewer();
+}
+function closeViewer() {
+  const v = document.querySelector("#mediaWrap video");
+  if (v) v.pause();
+  const bar = document.querySelector(".vid-bar");
+  if (bar) bar.remove();
+  document.getElementById("viewer").classList.remove("open");
+}
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s || 0));
+  return Math.floor(s / 60) + ":" + ((s % 60) < 10 ? "0" : "") + (s % 60);
+}
+function bindVideoBar(vid) {
+  const playBtn = document.getElementById("vidPlay");
+  const seek = document.getElementById("vidSeek");
+  const timeEl = document.getElementById("vidTime");
+  if (!playBtn || !seek) return;
+  const updateTime = () => {
+    if (!seek.dragging && vid.duration) seek.value = (vid.currentTime / vid.duration) * 100;
+    if (timeEl) timeEl.textContent = fmtTime(vid.currentTime) + " / " + fmtTime(vid.duration);
+  };
+  playBtn.onclick = (e) => { e.stopPropagation(); vid.paused ? vid.play() : vid.pause(); };
+  vid.onclick = (e) => { e.stopPropagation(); if (scale <= 1.05) vid.paused ? vid.play() : vid.pause(); };
+  vid.ontimeupdate = updateTime;
+  vid.onplay = () => { playBtn.innerHTML = ICON_PAUSE; };
+  vid.onpause = () => { playBtn.innerHTML = ICON_PLAY; };
+  seek.oninput = () => { seek.dragging = true; if (vid.duration) vid.currentTime = (seek.value / 100) * vid.duration; };
+  seek.onchange = () => { seek.dragging = false; };
+  const muteBtn = document.getElementById("vidMute");
+  if (muteBtn) muteBtn.onclick = (e) => { e.stopPropagation(); vid.muted = !vid.muted; muteBtn.textContent = vid.muted ? "🔇" : "🔊"; };
+  const skipB = document.getElementById("vidSkipBack"), skipF = document.getElementById("vidSkipFwd");
+  if (skipB) skipB.onclick = (e) => { e.stopPropagation(); vid.currentTime = Math.max(0, vid.currentTime - 10); };
+  if (skipF) skipF.onclick = (e) => { e.stopPropagation(); vid.currentTime = Math.min(vid.duration || 1e9, vid.currentTime + 10); };
+  if (!vid.paused) playBtn.innerHTML = ICON_PAUSE;
+}
+function updateViewer() {
+  if (!filtered.length) return;
+  const item = filtered[currentIndex];
+  ensureView(item);
+  const wrap = document.getElementById("mediaWrap");
+  resetZoom();
+  const oldBar = document.querySelector(".vid-bar");
+  if (oldBar) oldBar.remove();
+  if (item.type === "photo") {
+    wrap.innerHTML = '<div class="tf-layer" id="tfLayer"><img src="' + item.url + '" referrerpolicy="no-referrer" alt="" /></div>';
+  } else {
+    const loopAttr = ensureView(item).autoNext ? "" : " loop";
+    wrap.innerHTML = '<div class="tf-layer" id="tfLayer"><video id="viewerVideo" src="' + item.url + '" playsinline webkit-playsinline preload="auto" referrerpolicy="no-referrer" autoplay' + loopAttr + (item.thumb ? ' poster="' + item.thumb + '"' : "") + "></video></div>";
+    const bar = document.createElement("div");
+    bar.className = "vid-bar";
+    bar.innerHTML = '<div class="vid-bar-row"><button type="button" id="vidPlay">' + ICON_PLAY + '</button><input type="range" id="vidSeek" min="0" max="100" value="0" step="0.1" /><span class="t" id="vidTime">0:00 / 0:00</span></div><div class="vid-bar-row"><button type="button" id="vidMute">🔊</button><button type="button" id="vidSkipBack" class="wide">−10s</button><button type="button" id="vidSkipFwd" class="wide">+10s</button></div>';
+    document.getElementById("viewerBody").appendChild(bar);
+    const vid = document.getElementById("viewerVideo");
+    if (vid) {
+      vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+      bindVideoBar(vid);
+    }
+  }
+  applyMediaTransform();
+  document.getElementById("viewerCounter").textContent = (currentIndex + 1) + " / " + filtered.length;
+}
+document.getElementById("btnClose").onclick = closeViewer;
+document.getElementById("btnPrev").onclick = () => { currentIndex = (currentIndex - 1 + filtered.length) % filtered.length; updateViewer(); };
+document.getElementById("btnNext").onclick = () => { currentIndex = (currentIndex + 1) % filtered.length; updateViewer(); };
+document.getElementById("btnOpen").onclick = () => { const it = filtered[currentIndex]; if (it && it.postUrl) window.open(it.postUrl, "_blank"); };
+document.getElementById("btnDel").onclick = async () => {
+  const it = filtered[currentIndex]; if (!it) return;
+  await idbDelete(STORE, it.id);
+  items = items.filter((i) => i.id !== it.id);
+  applyFilter();
+  if (!filtered.length) closeViewer();
+  else { currentIndex = Math.min(currentIndex, filtered.length - 1); updateViewer(); }
+  render(); renderHighlights(); toast("Đã xóa");
+};
+
+(function gestures() {
+  const body = document.getElementById("viewerBody");
+  let startDist = 0, startScale = 1, startX = 0, startY = 0, isPinching = false, isPanning = false, swiping = false, sx0 = 0, sy0 = 0;
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  body.addEventListener("touchstart", (e) => {
+    if (!filtered[currentIndex]) return;
+    if (e.touches.length === 2) { isPinching = true; swiping = false; isPanning = false; startDist = dist(e.touches); startScale = scale; return; }
+    if (e.touches.length === 1) {
+      const now = Date.now();
+      if (now - lastTap < 280) {
+        if (scale > 1.1) { scale = 1; posX = 0; posY = 0; }
+        else {
+          scale = 2.5;
+          const r = body.getBoundingClientRect();
+          const cx = e.touches[0].clientX - r.left - r.width / 2;
+          const cy = e.touches[0].clientY - r.top - r.height / 2;
+          posX = -cx * (scale - 1); posY = -cy * (scale - 1);
+        }
+        applyMediaTransform(); lastTap = 0; return;
+      }
+      lastTap = now;
+      if (scale > 1.05) { isPanning = true; startX = e.touches[0].clientX - posX; startY = e.touches[0].clientY - posY; }
+      else { swiping = true; sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY; }
+    }
+  }, { passive: true });
+  body.addEventListener("touchmove", (e) => {
+    if (isPinching && e.touches.length === 2) {
+      e.preventDefault();
+      scale = Math.min(4, Math.max(1, startScale * (dist(e.touches) / startDist)));
+      applyMediaTransform();
+    } else if (isPanning && e.touches.length === 1 && scale > 1.05) {
+      e.preventDefault();
+      posX = e.touches[0].clientX - startX; posY = e.touches[0].clientY - startY;
+      applyMediaTransform();
+    }
+  }, { passive: false });
+  body.addEventListener("touchend", (e) => {
+    if (swiping && e.changedTouches.length === 1) {
+      const dx = e.changedTouches[0].clientX - sx0, dy = e.changedTouches[0].clientY - sy0;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        currentIndex = dx < 0 ? (currentIndex + 1) % filtered.length : (currentIndex - 1 + filtered.length) % filtered.length;
+        updateViewer();
+      }
+    }
+    isPinching = isPanning = swiping = false;
+    if (scale < 1.05) { scale = 1; posX = 0; posY = 0; applyMediaTransform(); }
+  });
+})();
+
+/* ---------- fetch / add ---------- */
+function extractTweetId(url) {
+  const m = (url || "").match(/(?:twitter\.com|x\.com)\/[^\/\s]+\/status\/(\d+)/i) || (url || "").match(/\/status\/(\d+)/i);
+  return m ? m[1] : null;
+}
+function extractUsername(input) {
+  let s = (input || "").trim().split("#")[0];
+  if (extractTweetId(s)) return null;
+  let m = s.match(/(?:twitter\.com|x\.com)\/@?([A-Za-z0-9_]{1,15})(?:\/|\?|$)/i);
+  if (m && !/^(status|i|search|home|explore|settings)$/i.test(m[1])) return m[1];
+  m = s.match(/^@?([A-Za-z0-9_]{1,15})$/);
+  return m ? m[1] : null;
+}
+async function proxyFetch(url) {
+  let res;
+  try { res = await fetch(url); } catch (e) { throw new Error("Không kết nối proxy / Worker"); }
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) {
+    if (/hello world/i.test(text)) throw new Error("Worker Hello World — deploy worker.js");
+    throw new Error("Proxy không trả JSON");
+  }
+  if (!res.ok) throw new Error((data && data.error) || ("HTTP " + res.status));
+  return data;
+}
+async function addMediaList(list, meta) {
+  let added = 0;
+  const markNew = !!(meta && (meta.isNew || meta.fromShare));
+  for (let i = 0; i < list.length; i++) {
+    const m = list[i];
+    if (!m || !m.url || items.some((it) => it.url === m.url)) continue;
+    const item = {
+      id: crypto.randomUUID(), type: m.type || "photo", url: m.url, thumb: m.thumb || null,
+      postUrl: m.postUrl || meta.postUrl || null, source: meta.source || "link",
+      fromUser: meta.fromUser || null, mode: meta.mode || null, addedAt: Date.now(),
+      isNew: markNew, fromShare: !!(meta && meta.fromShare),
+      view: { rotation: 0, flipH: false, flipV: false, autoNext: false }
+    };
+    await idbPut(STORE, item);
+    items.unshift(item);
+    added++;
+  }
+  if (added) scheduleRender(false);
+  return added;
+}
+async function upsertAccount(username, modes) {
+  let acc = accounts.find((a) => a.username.toLowerCase() === username.toLowerCase());
+  if (!acc) { acc = { username, modes: [], lastFetchAt: 0, addedAt: Date.now() }; accounts.push(acc); }
+  (modes || []).forEach((m) => { if (acc.modes.indexOf(m) < 0) acc.modes.push(m); });
+  acc.lastFetchAt = Date.now();
+  await idbPut(STORE_ACC, acc);
+}
+async function loadUserProgressive(username, mode) {
+  if (job && job.running) { toast("Đang chạy"); return; }
+  const modes = mode === "all" ? ["posts", "reposts"] : [mode];
+  job = { running: true, stop: false };
+  showProgress(true);
+  let totalAdded = 0, postsScanned = 0;
+  try {
+    for (let mi = 0; mi < modes.length && !job.stop; mi++) {
+      const m = modes[mi];
+      const source = m === "reposts" ? "user-reposts" : "user-posts";
+      const allIds = [], seen = {};
+      let cursor = "", page = 0;
+      while (!job.stop && page < MAX_PAGES) {
+        page++;
+        const q = PROXY_URL + "?user=" + encodeURIComponent(username) + "&mode=" + m + "&action=list&pageSize=25" + (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+        setProgress("@" + username + " · " + m + " · trang " + page, allIds.length, MIN_POSTS);
+        const data = await proxyFetch(q);
+        (data.ids || []).forEach((id) => { if (!seen[id]) { seen[id] = true; allIds.push(id); } });
+        cursor = data.nextCursor || "";
+        if (!data.hasMore || !cursor || !(data.ids || []).length) break;
+        if (allIds.length >= MIN_POSTS * 2) break;
+      }
+      if (!allIds.length) continue;
+      for (let i = 0; i < allIds.length && !job.stop; i += 4) {
+        const slice = allIds.slice(i, i + 4);
+        const results = await Promise.all(slice.map((sid) => proxyFetch(PROXY_URL + "?id=" + sid).catch(() => null)));
+        results.forEach((data) => {
+          postsScanned++;
+          if (!data || !data.media) return;
+          const list = data.media.map((x) => Object.assign({}, x, { postUrl: x.postUrl || data.postUrl }));
+          addMediaList(list, { source, fromUser: username, mode: m, postUrl: data.postUrl }).then((n) => { totalAdded += n; });
+        });
+        await new Promise((r) => setTimeout(r, 50));
+        setProgress("@" + username + " · " + m + " · " + postsScanned + "/" + allIds.length, postsScanned, allIds.length);
+      }
+    }
+    await upsertAccount(username, modes);
+    scheduleRender(true); renderHighlights();
+    toast(totalAdded ? ("+" + totalAdded + " media") : "Không thêm mới");
+  } catch (e) { toast(e.message || "Lỗi"); }
+  finally { job.running = false; showProgress(false); document.getElementById("linkInput").value = ""; }
+}
+async function addFromPostLink(url, opts) {
+  opts = opts || {};
+  setLoading(true);
+  try {
+    const id = extractTweetId(url);
+    if (!id) { toast("Không phải link bài"); return; }
+    const data = await proxyFetch(PROXY_URL + "?id=" + id);
+    if (!(data.media || []).length) { toast("Không có media"); return; }
+    const added = await addMediaList(data.media, {
+      source: "link", fromUser: data.author || null, postUrl: data.postUrl || url,
+      isNew: true, fromShare: !!opts.fromShare
+    });
+    scheduleRender(true); renderHighlights();
+    if (added && opts.fromShare) {
+      currentAlbum = "new";
+      document.querySelectorAll(".album-tab").forEach((x) => x.classList.toggle("active", x.dataset.album === "new"));
+      renderPage = 1; render();
+      switchScreen("albums");
+    }
+    toast(added ? ("+" + added + (opts.fromShare ? " → New items" : "")) : "Đã có sẵn");
+    document.getElementById("linkInput").value = "";
+  } catch (e) { toast(e.message || "Lỗi"); }
+  finally { setLoading(false); }
+}
+function openUserModeSheet(u) {
+  pendingUsername = u;
+  document.getElementById("userModeTitle").textContent = "Lấy media @" + u;
+  document.getElementById("userModeSheet").classList.add("open");
+}
+async function handleInput(raw, opts) {
+  const text = (raw || "").trim();
+  if (!text) return;
+  // extract first x/twitter status link if present in longer text
+  const statusMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:twitter\.com|x\.com)\/[^\/\s]+\/status\/\d+[^\s]*/i);
+  const candidate = statusMatch ? statusMatch[0] : text;
+  if (extractTweetId(candidate)) return addFromPostLink(candidate, opts);
+  const u = extractUsername(text);
+  if (u) return openUserModeSheet(u);
+  toast("Link bài / @user / profile");
+}
+document.getElementById("btnAdd").onclick = () => handleInput(document.getElementById("linkInput").value);
+document.getElementById("linkInput").onkeydown = (e) => { if (e.key === "Enter") handleInput(e.target.value); };
+document.getElementById("btnModePosts").onclick = () => { const u = pendingUsername; document.getElementById("userModeSheet").classList.remove("open"); if (u) loadUserProgressive(u, "posts"); };
+document.getElementById("btnModeReposts").onclick = () => { const u = pendingUsername; document.getElementById("userModeSheet").classList.remove("open"); if (u) loadUserProgressive(u, "reposts"); };
+document.getElementById("btnModeAll").onclick = () => { const u = pendingUsername; document.getElementById("userModeSheet").classList.remove("open"); if (u) loadUserProgressive(u, "all"); };
+document.getElementById("btnCloseUserMode").onclick = () => document.getElementById("userModeSheet").classList.remove("open");
+document.getElementById("btnStopProgress").onclick = () => { if (job) job.stop = true; };
+
+document.querySelectorAll(".album-tab").forEach((b) => b.onclick = () => { document.querySelectorAll(".album-tab").forEach((x) => x.classList.remove("active")); b.classList.add("active"); currentAlbum = b.dataset.album; renderPage = 1; render(); });
+document.querySelectorAll(".filter-btn").forEach((b) => b.onclick = () => { document.querySelectorAll(".filter-btn").forEach((x) => x.classList.remove("active")); b.classList.add("active"); currentFilter = b.dataset.filter; renderPage = 1; render(); });
+document.getElementById("userFilter").onchange = (e) => { currentUserFilter = e.target.value; renderPage = 1; render(); };
+document.getElementById("sortSelect").onchange = (e) => { sortOrder = e.target.value; renderPage = 1; render(); };
+document.getElementById("colsSelect").onchange = (e) => { cols = Number(e.target.value); render(); };
+document.getElementById("btnLoadMore").onclick = () => { renderPage++; render(); };
+document.getElementById("albumScroll").addEventListener("scroll", function () {
+  if (this.scrollTop + this.clientHeight < this.scrollHeight - 400) return;
+  if (renderPage * PAGE_SIZE >= filtered.length) return;
+  renderPage++; render();
+}, { passive: true });
+document.getElementById("btnLayout").onclick = () => {
+  layoutMode = layoutMode === "horizontal" ? "masonry" : "horizontal";
+  document.getElementById("layoutSelect").value = layoutMode;
+  applyLayoutUI();
+};
+document.getElementById("layoutSelect").onchange = applyLayoutUI;
+document.getElementById("btnClear").onclick = async () => {
+  if (!confirm("Xóa toàn bộ media?")) return;
+  await idbClear(STORE); items = []; render(); renderHighlights(); toast("Đã xóa");
+};
+document.getElementById("btnRefresh").onclick = async () => {
+  if (!accounts.length) return toast("Chưa có user");
+  for (const a of accounts) {
+    for (const m of (a.modes && a.modes.length ? a.modes : ["reposts"])) {
+      if (job && job.stop) break;
+      await loadUserProgressive(a.username, m);
+    }
+  }
+};
+function renderAccountsList() {
+  const el = document.getElementById("accountsList");
+  if (!accounts.length) { el.innerHTML = "<p style='color:var(--muted)'>Trống</p>"; return; }
+  el.innerHTML = accounts.map((a) =>
+    '<div style="padding:10px 0;border-bottom:1px solid var(--border)"><strong>@' + a.username + '</strong><div style="display:flex;gap:6px;margin-top:6px">' +
+    '<button type="button" data-del-media="' + a.username + '" style="flex:1;height:32px;border-radius:8px;border:1px solid rgba(255,80,90,.35);background:rgba(255,80,90,.15);color:var(--danger);font-size:11px;font-weight:600">Xóa media</button>' +
+    '<button type="button" data-del="' + a.username + '" style="height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px">Bỏ lưu</button></div></div>'
+  ).join("");
+  el.querySelectorAll("[data-del]").forEach((btn) => btn.onclick = async () => {
+    await idbDelete(STORE_ACC, btn.getAttribute("data-del"));
+    accounts = accounts.filter((a) => a.username !== btn.getAttribute("data-del"));
+    renderAccountsList();
+  });
+  el.querySelectorAll("[data-del-media]").forEach((btn) => btn.onclick = async () => {
+    const u = btn.getAttribute("data-del-media");
+    if (!confirm("Xóa media @" + u + "?")) return;
+    const remove = items.filter((i) => (i.fromUser || "").toLowerCase() === u.toLowerCase());
+    for (const it of remove) await idbDelete(STORE, it.id);
+    items = items.filter((i) => (i.fromUser || "").toLowerCase() !== u.toLowerCase());
+    renderPage = 1; render(); renderHighlights(); renderAccountsList();
+    toast("Đã xóa " + remove.length);
+  });
+}
+document.getElementById("btnAccounts").onclick = () => { renderAccountsList(); document.getElementById("accountsSheet").classList.add("open"); };
+document.getElementById("btnCloseAccounts").onclick = () => document.getElementById("accountsSheet").classList.remove("open");
+
+/* ---------- chat + notifications ---------- */
+function contrastText(hex) {
+  if (!hex || typeof hex !== "string") return "#f0f2f5";
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  // relative luminance
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return lum > 0.55 ? "#0c0e12" : "#f0f2f5";
+}
+function loadChatTheme() {
+  const t = JSON.parse(localStorage.getItem("xgal_chat_theme") || "{}");
+  document.documentElement.style.setProperty("--chat-bg", t.bg || "#0d0f14");
+  document.documentElement.style.setProperty("--chat-mine", t.mine || "#5b6fd8");
+  document.documentElement.style.setProperty("--chat-theirs", t.theirs || "#1c2230");
+  document.documentElement.style.setProperty("--chat-text-mine", contrastText(t.mine || "#5b6fd8"));
+  document.documentElement.style.setProperty("--chat-text-theirs", contrastText(t.theirs || "#1c2230"));
+  const nick = t.nick || (dialogs && dialogs.persona && dialogs.persona.nickname_default) || "Chị Tư";
+  document.getElementById("chatTitle").textContent = "💋 " + nick;
+  document.getElementById("chatNick").value = nick;
+  document.getElementById("chatColorBg").value = t.bg || "#0d0f14";
+  document.getElementById("chatColorMine").value = t.mine || "#5b6fd8";
+  document.getElementById("chatColorTheirs").value = t.theirs || "#1c2230";
+}
+function saveChatTheme() {
+  const t = {
+    nick: document.getElementById("chatNick").value || "Chị Tư",
+    bg: document.getElementById("chatColorBg").value,
+    mine: document.getElementById("chatColorMine").value,
+    theirs: document.getElementById("chatColorTheirs").value
+  };
+  localStorage.setItem("xgal_chat_theme", JSON.stringify(t));
+  loadChatTheme();
+  toast("Đã lưu theme chat");
+}
+document.getElementById("btnSaveChatTheme").onclick = saveChatTheme;
+document.getElementById("btnChatTheme").onclick = () => switchScreen("settings");
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function resolveMediaCount() {
+  const v = document.getElementById("notiMediaCount").value;
+  if (v === "random") return 1 + Math.floor(Math.random() * 5);
+  return Math.max(1, Math.min(5, Number(v) || 2));
+}
+function resolveNotiIntervalMins() {
+  const v = document.getElementById("notiInterval").value;
+  if (v === "random") return 30 + Math.floor(Math.random() * 271); // 30–300
+  return Math.max(1, Number(v) || 180);
+}
+function randomMedia(n) {
+  if (!items.length) return [];
+  const copy = items.slice().sort(() => Math.random() - 0.5);
+  return copy.slice(0, Math.min(n || 1, copy.length));
+}
+async function pushChatMessage(msg) {
+  chatMessages.push(msg);
+  await idbPut(STORE_CHAT, msg);
+  renderChat();
+}
+function renderChat() {
+  const box = document.getElementById("chatMsgs");
+  box.innerHTML = "";
+  chatMessages.forEach((m) => {
+    const div = document.createElement("div");
+    div.className = "bubble " + (m.from === "me" ? "mine" : "theirs");
+    let html = (m.text || "").replace(/</g, "&lt;");
+    if (m.mediaIds && m.mediaIds.length) {
+      html += '<div class="media-row">';
+      m.mediaIds.forEach((id) => {
+        const it = items.find((x) => x.id === id) || (m.mediaCache && m.mediaCache[id]);
+        if (!it) return;
+        const src = gridUrl(it.thumb || it.url);
+        html += '<img data-mid="' + id + '" src="' + src + '" referrerpolicy="no-referrer" />';
+      });
+      html += "</div>";
+    }
+    div.innerHTML = html;
+    div.querySelectorAll("img[data-mid]").forEach((img) => {
+      img.onclick = () => {
+        const id = img.getAttribute("data-mid");
+        const list = (m.mediaIds || []).map((mid) => {
+          return items.find((x) => x.id === mid) || (m.mediaCache && m.mediaCache[mid]);
+        }).filter(Boolean);
+        if (!list.length) return;
+        filtered = list;
+        const idx = Math.max(0, list.findIndex((x) => x.id === id));
+        openViewer(idx);
+      };
+    });
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+async function botReply() {
+  if (!dialogs) return;
+  const text = pick(dialogs.replies || ["Xem hàng đi"]);
+  const medias = randomMedia(resolveMediaCount());
+  const mediaIds = medias.map((m) => m.id);
+  const mediaCache = {};
+  medias.forEach((m) => { mediaCache[m.id] = { id: m.id, url: m.url, thumb: m.thumb, type: m.type }; });
+  await pushChatMessage({ id: crypto.randomUUID(), from: "bot", text, mediaIds, mediaCache, at: Date.now() });
+}
+document.getElementById("btnChatSend").onclick = async () => {
+  const input = document.getElementById("chatInput");
+  const text = (input.value || "").trim();
+  if (!text) return;
+  input.value = "";
+  await pushChatMessage({ id: crypto.randomUUID(), from: "me", text, at: Date.now() });
+  setTimeout(() => botReply(), 400 + Math.random() * 800);
+};
+document.getElementById("chatInput").onkeydown = (e) => { if (e.key === "Enter") document.getElementById("btnChatSend").onclick(); };
+document.getElementById("btnChatClear").onclick = async () => {
+  if (!confirm("Xóa hội thoại?")) return;
+  await idbClear(STORE_CHAT);
+  chatMessages = [];
+  renderChat();
+};
+
+async function ensureDialogs() {
+  if (dialogs) return dialogs;
+  try {
+    const res = await fetch("./dialogs.json");
+    dialogs = await res.json();
+  } catch (e) {
+    dialogs = { persona: { nickname_default: "Chị Tư" }, notifications: ["Vào app xem hàng"], replies: ["Xem media đi"], greetings: ["Chào"] };
+  }
+  return dialogs;
+}
+
+async function showLocalNotification(title, body, payload) {
+  const perm = Notification.permission;
+  if (perm !== "granted") {
+    toast("Chưa có quyền thông báo");
+    return;
+  }
+  const reg = await navigator.serviceWorker.ready;
+  reg.active && reg.active.postMessage({
+    type: "show-notification",
+    title: title || "Chị Tư",
+    body: body,
+    payload: payload || { open: "chat" }
+  });
+}
+
+async function sendNudgeNoti() {
+  await ensureDialogs();
+  const body = pick(dialogs.notifications || dialogs.idle_pushes || ["Vào app đi"]);
+  const nick = JSON.parse(localStorage.getItem("xgal_chat_theme") || "{}").nick || (dialogs.persona && dialogs.persona.nickname_default) || "Chị Tư";
+  const medias = randomMedia(resolveMediaCount());
+  const mediaIds = medias.map((m) => m.id);
+  const mediaCache = {};
+  medias.forEach((m) => { mediaCache[m.id] = { id: m.id, url: m.url, thumb: m.thumb, type: m.type }; });
+  await pushChatMessage({
+    id: crypto.randomUUID(), from: "bot", text: body, mediaIds, mediaCache, at: Date.now(), via: "noti"
+  });
+  await showLocalNotification(nick, body, { open: "chat" });
+}
+
+function setupNotiTimer() {
+  if (notiTimer) clearTimeout(notiTimer);
+  const enabled = document.getElementById("notiEnabled").checked;
+  localStorage.setItem("xgal_noti_enabled", enabled ? "1" : "0");
+  localStorage.setItem("xgal_noti_interval", document.getElementById("notiInterval").value);
+  localStorage.setItem("xgal_noti_media", document.getElementById("notiMediaCount").value);
+  if (!enabled) return;
+  const scheduleNext = () => {
+    const mins = resolveNotiIntervalMins();
+    notiTimer = setTimeout(() => {
+      sendNudgeNoti().catch(() => {}).finally(() => {
+        if (document.getElementById("notiEnabled").checked) scheduleNext();
+      });
+    }, mins * 60 * 1000);
+  };
+  scheduleNext();
+}
+document.getElementById("btnRequestNoti").onclick = async () => {
+  const p = await Notification.requestPermission();
+  toast(p === "granted" ? "Đã cấp quyền noti" : "Từ chối noti");
+};
+document.getElementById("btnTestNoti").onclick = () => sendNudgeNoti().then(() => toast("Đã gửi noti test + tin chat"));
+document.getElementById("notiEnabled").onchange = setupNotiTimer;
+document.getElementById("notiInterval").onchange = setupNotiTimer;
+document.getElementById("notiMediaCount").onchange = () => {
+  localStorage.setItem("xgal_noti_media", document.getElementById("notiMediaCount").value);
+};
+
+function tryOpenChatFromUrl() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("open") === "chat") {
+    switchScreen("chat");
+    history.replaceState({}, "", location.pathname);
+    return;
+  }
+  // Web Share Target (GET): title / text / url
+  const sharedUrl = (params.get("url") || "").trim();
+  const sharedText = (params.get("text") || "").trim();
+  const sharedTitle = (params.get("title") || "").trim();
+  const combined = [sharedUrl, sharedText, sharedTitle].filter(Boolean).join(" ");
+  if (combined && (extractTweetId(combined) || /(?:twitter\.com|x\.com)\//i.test(combined))) {
+    history.replaceState({}, "", location.pathname);
+    switchScreen("albums");
+    handleInput(combined, { fromShare: true });
+  }
+}
+navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "open-chat") switchScreen("chat");
+});
+
+function registerSW() {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
+}
+
+(async function init() {
+  items = await idbGetAll(STORE);
+  accounts = await idbGetAll(STORE_ACC);
+  chatMessages = (await idbGetAll(STORE_CHAT)).sort((a, b) => (a.at || 0) - (b.at || 0));
+  items.forEach((it) => {
+    if (!it.source) it.source = "link";
+    if (it.source === "repost") it.source = "user-reposts";
+    if (!it.view) it.view = { rotation: 0, flipH: false, flipV: false, autoNext: false };
+  });
+  await ensureDialogs();
+  document.getElementById("layoutSelect").value = layoutMode;
+  document.getElementById("notiEnabled").checked = localStorage.getItem("xgal_noti_enabled") === "1";
+  const savedInterval = localStorage.getItem("xgal_noti_interval") || "180";
+  const savedMedia = localStorage.getItem("xgal_noti_media") || "2";
+  const intervalEl = document.getElementById("notiInterval");
+  const mediaEl = document.getElementById("notiMediaCount");
+  if ([...intervalEl.options].some((o) => o.value === savedInterval)) intervalEl.value = savedInterval;
+  else intervalEl.value = "180";
+  if ([...mediaEl.options].some((o) => o.value === savedMedia)) mediaEl.value = savedMedia;
+  else mediaEl.value = "2";
+  loadChatTheme();
+  applyLayoutUI();
+  render();
+  renderHighlights();
+  renderChat();
+  setupNotiTimer();
+  tryOpenChatFromUrl();
+  registerSW();
+  // periodically drop expired "New items" visibility (data stays in albums)
+  setInterval(() => {
+    if (currentAlbum === "new") render();
+  }, 60 * 1000);
+  if (!chatMessages.length && dialogs) {
+    const g = pick(dialogs.greetings || ["Chào anh"]);
+    await pushChatMessage({ id: crypto.randomUUID(), from: "bot", text: g, at: Date.now() });
+  }
+})();
+</script>
+</body>
+</html>
